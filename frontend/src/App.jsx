@@ -1,8 +1,17 @@
-import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import { useEffect, useRef, useState } from "react";
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+} from "react-leaflet";
+import { useMap } from "react-leaflet";
+
 import "leaflet/dist/leaflet.css";
 
-import L from "leaflet";
+// Fixar Leaflet-ikoner
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -21,6 +30,11 @@ function App() {
     notes: "",
   });
 
+  const [tracking, setTracking] = useState(false);
+  const [currentPosition, setCurrentPosition] = useState(null);
+  const [route, setRoute] = useState([]);
+  const watchIdRef = useRef(null);
+
   // Hämta resor från backend
   useEffect(() => {
     fetch("http://localhost:3000/api/trips")
@@ -28,12 +42,11 @@ function App() {
       .then((data) => setTrips(data));
   }, []);
 
-  // Hantera formulärändringar
+  // Formulärändringar
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  // Funktion för att hämta koordinater från Nominatim
   async function getCoordinates(place) {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
@@ -42,10 +55,7 @@ function App() {
     );
     const data = await res.json();
     if (data.length > 0) {
-      return {
-        lat: parseFloat(data[0].lat),
-        lon: parseFloat(data[0].lon),
-      };
+      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
     }
     return null;
   }
@@ -53,15 +63,10 @@ function App() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    // Hämta koordinater för start och slut
     const startCoords = await getCoordinates(form.start);
     const endCoords = await getCoordinates(form.end);
 
-    const tripWithCoords = {
-      ...form,
-      startCoords,
-      endCoords,
-    };
+    const tripWithCoords = { ...form, startCoords, endCoords };
 
     fetch("http://localhost:3000/api/trips", {
       method: "POST",
@@ -71,18 +76,98 @@ function App() {
       .then((res) => res.json())
       .then((newTrip) => {
         setTrips((prev) => [...prev, newTrip]);
-        setForm({
-          start: "",
-          end: "",
-          startTime: "",
-          endTime: "",
-          notes: "",
-        });
+        setForm({ start: "", end: "", startTime: "", endTime: "", notes: "" });
       });
+  }
+
+  // Starta realtids-GPS
+  function startTracking() {
+    if (!navigator.geolocation) {
+      alert("Geolocation stöds inte i din webbläsare.");
+      return;
+    }
+
+    setTracking(true);
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setCurrentPosition([latitude, longitude]);
+        setRoute((prev) => [...prev, [latitude, longitude]]);
+      },
+      (err) => console.error(err),
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+    );
+  }
+
+  // Stoppa GPS och spara resa
+  function stopTracking() {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setTracking(false);
+
+    if (route.length > 0) {
+      const startCoords = { lat: route[0][0], lon: route[0][1] };
+      const endCoords = {
+        lat: route[route.length - 1][0],
+        lon: route[route.length - 1][1],
+      };
+
+      const trip = {
+        start: "GPS Start",
+        end: "GPS Slut",
+        startTime: new Date().toISOString(),
+        endTime: new Date().toISOString(),
+        startCoords,
+        endCoords,
+        route,
+      };
+
+      fetch("http://localhost:3000/api/trips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(trip),
+      })
+        .then((res) => res.json())
+        .then((newTrip) => {
+          setTrips((prev) => [...prev, newTrip]);
+          setRoute([]);
+        });
+    }
+    function Recenter({ position }) {
+      const map = useMap();
+      useEffect(() => {
+        if (position) {
+          map.setView(position, map.getZoom());
+        }
+      }, [position, map]);
+      return null;
+    }
+    // Komponent som zoomar ut för att visa hela rutten
+    function FitBounds({ positions }) {
+      const map = useMap();
+
+      useEffect(() => {
+        if (positions && positions.length > 0) {
+          map.fitBounds(positions);
+        }
+      }, [positions, map]);
+
+      return null;
+    }
   }
 
   return (
     <div style={{ padding: "1rem" }}>
+      <div style={{ marginBottom: "1rem" }}>
+        {!tracking ? (
+          <button onClick={startTracking}>Starta GPS-resa</button>
+        ) : (
+          <button onClick={stopTracking}>Avsluta GPS-resa</button>
+        )}
+      </div>
+
       <h1>⛵ Min Seglingsloggbok</h1>
 
       {/* Formulär */}
@@ -136,8 +221,8 @@ function App() {
       {/* Karta */}
       <h2>Karta</h2>
       <MapContainer
-        center={[59.3293, 18.0686]} // Stockholm default
-        zoom={5}
+        center={[59.3293, 18.0686]}
+        zoom={12}
         style={{ height: "400px", width: "100%" }}
       >
         <TileLayer
@@ -145,6 +230,18 @@ function App() {
           url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
         />
 
+        {currentPosition && tracking && (
+          <>
+            <Marker position={currentPosition}>
+              <Popup>Du är här</Popup>
+            </Marker>
+            <Recenter position={currentPosition} />
+          </>
+        )}
+
+        {route.length > 1 && <Polyline positions={route} color='red' />}
+
+        {/* Historiska resor */}
         {trips.map((trip) => (
           <>
             {trip.startCoords && (
@@ -157,6 +254,8 @@ function App() {
                 <Popup>Slut: {trip.end}</Popup>
               </Marker>
             )}
+            {trip.route && <Polyline positions={trip.route} color='green' />}
+            {!tracking && trip.route && <FitBounds positions={trip.route} />}
           </>
         ))}
       </MapContainer>

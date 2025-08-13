@@ -1,5 +1,5 @@
-import express from "express";
 import cors from "cors";
+import express from "express";
 import mongoose from "mongoose";
 
 const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/final-project";
@@ -26,11 +26,8 @@ app.get("/api/trips", (req, res) => {
 
 // POST a trip
 app.post("/api/trips", (req, res) => {
-  const { start, end, startTime, endTime, notes } = req.body;
-
-  if (!start || !end || !startTime || !endTime) {
-    return res.status(400).json({ error: "Alla fält utom anteckningar krävs" });
-  }
+  const { start, end, startTime, endTime, notes, startCoords, endCoords } =
+    req.body;
 
   const newTrip = {
     id: Date.now(),
@@ -39,6 +36,8 @@ app.post("/api/trips", (req, res) => {
     startTime,
     endTime,
     notes: notes || "",
+    startCoords,
+    endCoords,
   };
 
   trips.push(newTrip);
