@@ -11,6 +11,8 @@ import { useMap } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 // Fixar Leaflet-ikoner
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -37,7 +39,7 @@ function App() {
 
   // Hämta resor från backend
   useEffect(() => {
-    fetch("http://localhost:3000/api/trips")
+    fetch(`${API_URL}/api/trips`)
       .then((res) => res.json())
       .then((data) => setTrips(data));
   }, []);
