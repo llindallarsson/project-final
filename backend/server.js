@@ -10,7 +10,13 @@ const port = process.env.PORT || 3000;
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: "*", // eller specifikt 'https://din-netlify-url.netlify.app'
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 app.use(express.json());
 
 let trips = [];
