@@ -22,6 +22,26 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
+function Recenter({ position }) {
+  const map = useMap();
+  useEffect(() => {
+    if (position) {
+      map.setView(position, map.getZoom());
+    }
+  }, [position, map]);
+  return null;
+}
+
+function FitBounds({ positions }) {
+  const map = useMap();
+  useEffect(() => {
+    if (positions && positions.length > 0) {
+      map.fitBounds(positions);
+    }
+  }, [positions, map]);
+  return null;
+}
+
 function App() {
   const [trips, setTrips] = useState([]);
   const [form, setForm] = useState({
@@ -70,7 +90,7 @@ function App() {
 
     const tripWithCoords = { ...form, startCoords, endCoords };
 
-    fetch("http://localhost:3000/api/trips", {
+    fetch(`${API_URL}/api/trips`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(tripWithCoords),
@@ -96,7 +116,12 @@ function App() {
         setCurrentPosition([latitude, longitude]);
         setRoute((prev) => [...prev, [latitude, longitude]]);
       },
-      (err) => console.error(err),
+      (err) => {
+        console.error("GPS error:", err);
+        alert(
+          "Kunde inte hämta GPS-position. Kontrollera att platsåtkomst är aktiverad."
+        );
+      },
       { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
     );
   }
@@ -126,7 +151,7 @@ function App() {
         route,
       };
 
-      fetch("http://localhost:3000/api/trips", {
+      fetch(`${API_URL}/api/trips`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(trip),
@@ -136,27 +161,6 @@ function App() {
           setTrips((prev) => [...prev, newTrip]);
           setRoute([]);
         });
-    }
-    function Recenter({ position }) {
-      const map = useMap();
-      useEffect(() => {
-        if (position) {
-          map.setView(position, map.getZoom());
-        }
-      }, [position, map]);
-      return null;
-    }
-    // Komponent som zoomar ut för att visa hela rutten
-    function FitBounds({ positions }) {
-      const map = useMap();
-
-      useEffect(() => {
-        if (positions && positions.length > 0) {
-          map.fitBounds(positions);
-        }
-      }, [positions, map]);
-
-      return null;
     }
   }
 
