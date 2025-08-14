@@ -22,8 +22,7 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: "*", // eller specifikt 'https://din-netlify-url.netlify.app'
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: ["https://vindra.netlify.app", "http://localhost:5173"],
     allowedHeaders: ["Content-Type"],
   })
 );
