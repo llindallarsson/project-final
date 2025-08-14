@@ -39,7 +39,7 @@ function App() {
 
   // Hämta resor från backend
   useEffect(() => {
-    fetch(`${API_URL}/api/trips`)
+    fetch(`${import.meta.env.VITE_API_URL}/trips`)
       .then((res) => res.json())
       .then((data) => setTrips(data));
   }, []);
