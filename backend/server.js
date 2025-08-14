@@ -3,7 +3,17 @@ import express from "express";
 import mongoose from "mongoose";
 
 const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/final-project";
-mongoose.connect(mongoUrl);
+mongoose
+  .connect(mongoUrl, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => {
+    console.log("Connected to MongoDB");
+  })
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+  });
 mongoose.Promise = Promise;
 
 const port = process.env.PORT || 3000;
