@@ -6,8 +6,10 @@ import {
   Polyline,
   Popup,
   TileLayer,
+  useMap,
 } from "react-leaflet";
-import { useMap } from "react-leaflet";
+
+import AutocompleteInput from "./components/AutocompleteInput";
 
 import "leaflet/dist/leaflet.css";
 
@@ -26,9 +28,7 @@ L.Icon.Default.mergeOptions({
 function Recenter({ position }) {
   const map = useMap();
   useEffect(() => {
-    if (position) {
-      map.setView(position, map.getZoom());
-    }
+    if (position) map.setView(position, map.getZoom());
   }, [position, map]);
   return null;
 }
@@ -36,9 +36,7 @@ function Recenter({ position }) {
 function FitBounds({ positions }) {
   const map = useMap();
   useEffect(() => {
-    if (positions && positions.length > 0) {
-      map.fitBounds(positions);
-    }
+    if (positions && positions.length > 0) map.fitBounds(positions);
   }, [positions, map]);
   return null;
 }
@@ -51,6 +49,8 @@ function App() {
     startTime: "",
     endTime: "",
     notes: "",
+    startCoords: null,
+    endCoords: null,
   });
 
   const [tracking, setTracking] = useState(false);
@@ -66,7 +66,6 @@ function App() {
       .catch((err) => console.error("Kunde inte hämta resor:", err));
   }, []);
 
-  // Formulärändringar
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
@@ -78,17 +77,22 @@ function App() {
       )}`
     );
     const data = await res.json();
-    if (data.length > 0) {
+    if (data.length > 0)
       return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-    }
     return null;
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
 
-    const startCoords = await getCoordinates(form.start);
-    const endCoords = await getCoordinates(form.end);
+    // Använd koordinater från formulär om de finns, annars hämta via Nominatim
+    const startCoords = form.startCoords || (await getCoordinates(form.start));
+    const endCoords = form.endCoords || (await getCoordinates(form.end));
+
+    if (!startCoords || !endCoords) {
+      alert("Kunde inte hitta koordinater för start eller slut.");
+      return;
+    }
 
     const tripWithCoords = { ...form, startCoords, endCoords };
 
@@ -100,12 +104,19 @@ function App() {
       .then((res) => res.json())
       .then((newTrip) => {
         setTrips((prev) => [...prev, newTrip]);
-        setForm({ start: "", end: "", startTime: "", endTime: "", notes: "" });
+        setForm({
+          start: "",
+          end: "",
+          startTime: "",
+          endTime: "",
+          notes: "",
+          startCoords: null,
+          endCoords: null,
+        });
       })
       .catch((err) => console.error("Kunde inte spara resa:", err));
   }
 
-  // Starta realtids-GPS
   function startTracking() {
     if (!navigator.geolocation) {
       alert("Geolocation stöds inte i din webbläsare.");
@@ -129,7 +140,6 @@ function App() {
     );
   }
 
-  // Stoppa GPS och spara resa
   function stopTracking() {
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
@@ -167,6 +177,7 @@ function App() {
         .catch((err) => console.error("Kunde inte spara GPS-resa:", err));
     }
   }
+
   return (
     <div style={{ padding: "1rem" }}>
       <div style={{ marginBottom: "1rem" }}>
@@ -181,18 +192,24 @@ function App() {
 
       {/* Formulär */}
       <form onSubmit={handleSubmit} style={{ marginBottom: "2rem" }}>
-        <input
-          name='start'
-          placeholder='Startdestination'
+        <AutocompleteInput
           value={form.start}
-          onChange={handleChange}
+          onChange={(val) => setForm({ ...form, start: val })}
+          onSelect={({ name, lat, lon }) =>
+            setForm({ ...form, start: name, startCoords: { lat, lon } })
+          }
+          placeholder='Startdestination'
         />
-        <input
-          name='end'
-          placeholder='Slutdestination'
+
+        <AutocompleteInput
           value={form.end}
-          onChange={handleChange}
+          onChange={(val) => setForm({ ...form, end: val })}
+          onSelect={({ name, lat, lon }) =>
+            setForm({ ...form, end: name, endCoords: { lat, lon } })
+          }
+          placeholder='Slutdestination'
         />
+
         <input
           type='datetime-local'
           name='startTime'
