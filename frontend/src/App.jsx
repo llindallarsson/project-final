@@ -12,6 +12,7 @@ import { useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const TRIPS_ENDPOINT = `${API_URL}/api/trips`;
 
 // Fixar Leaflet-ikoner
 delete L.Icon.Default.prototype._getIconUrl;
@@ -59,9 +60,10 @@ function App() {
 
   // Hämta resor från backend
   useEffect(() => {
-    fetch(`${API_URL}/api/trips`)
+    fetch(TRIPS_ENDPOINT)
       .then((res) => res.json())
-      .then((data) => setTrips(data));
+      .then((data) => setTrips(data))
+      .catch((err) => console.error("Kunde inte hämta resor:", err));
   }, []);
 
   // Formulärändringar
@@ -90,7 +92,7 @@ function App() {
 
     const tripWithCoords = { ...form, startCoords, endCoords };
 
-    fetch(`${API_URL}/api/trips`, {
+    fetch(TRIPS_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(tripWithCoords),
@@ -99,7 +101,8 @@ function App() {
       .then((newTrip) => {
         setTrips((prev) => [...prev, newTrip]);
         setForm({ start: "", end: "", startTime: "", endTime: "", notes: "" });
-      });
+      })
+      .catch((err) => console.error("Kunde inte spara resa:", err));
   }
 
   // Starta realtids-GPS
@@ -151,7 +154,7 @@ function App() {
         route,
       };
 
-      fetch(`${API_URL}/api/trips`, {
+      fetch(TRIPS_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(trip),
@@ -160,10 +163,10 @@ function App() {
         .then((newTrip) => {
           setTrips((prev) => [...prev, newTrip]);
           setRoute([]);
-        });
+        })
+        .catch((err) => console.error("Kunde inte spara GPS-resa:", err));
     }
   }
-
   return (
     <div style={{ padding: "1rem" }}>
       <div style={{ marginBottom: "1rem" }}>
