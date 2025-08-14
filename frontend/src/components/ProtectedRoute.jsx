@@ -1,0 +1,14 @@
+// src/components/ProtectedRoute.jsx
+import { Navigate } from "react-router-dom";
+
+export default function ProtectedRoute({ children }) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    // Om ingen token finns, skicka till /login
+    return <Navigate to='/login' replace />;
+  }
+
+  // Annars visa children (den skyddade sidan)
+  return children;
+}
