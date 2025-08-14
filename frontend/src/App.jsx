@@ -59,7 +59,7 @@ function App() {
 
   // Hämta resor från backend
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/trips`)
+    fetch(`${API_URL}/api/trips`)
       .then((res) => res.json())
       .then((data) => setTrips(data));
   }, []);
@@ -215,7 +215,7 @@ function App() {
       <h2>Tidigare resor</h2>
       <ul>
         {trips.map((trip) => (
-          <li key={trip.id}>
+          <li key={trip.id || trip._id}>
             <strong>{trip.start}</strong> → <strong>{trip.end}</strong>
             <br />
             {trip.startTime} – {trip.endTime}
