@@ -1,39 +1,52 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
-// import TripDetails from "./pages/TripDetails";
-// import AddTrip from "./pages/AddTrip";
-// import LiveTrip from "./pages/LiveTrip";
-// import Boats from "./pages/Boats";
-// import Places from "./pages/Places";
-// import Profile from "./pages/Profile";
-// import ServiceLogs from "./pages/ServiceLogs";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Navbar from "./components/Navbar";
+// src/App.jsx
+import { Outlet, Link, useNavigate } from "react-router-dom";
+import { useAuth } from "./store/auth";
 
-function App() {
+export default function App() {
+  const { token, logout } = useAuth();
+  const nav = useNavigate();
+  const doLogout = () => {
+    logout();
+    nav("/login");
+  };
+
   return (
-    <Router>
-      <Navbar />
-      <Routes>
-        <Route path='/login' element={<Login />} />
-        <Route path='/signup' element={<Signup />} />
+    <div className='min-h-screen grid grid-cols-[240px_1fr]'>
+      <aside className='bg-white border-r p-4 space-y-4'>
+        <h1 className='text-2xl font-bold'>Vindra</h1>
+        {token ? (
+          <>
+            <nav className='flex flex-col gap-2'>
+              <Link className='hover:underline' to='/'>
+                Resor
+              </Link>
+              <Link className='hover:underline' to='/trips/new'>
+                Ny resa
+              </Link>
+            </nav>
+            <button
+              onClick={doLogout}
+              className='mt-4 px-3 py-2 rounded bg-gray-900 text-white'
+            >
+              Logga ut
+            </button>
+          </>
+        ) : (
+          <nav className='flex flex-col gap-2'>
+            <Link className='hover:underline' to='/login'>
+              Logga in
+            </Link>
+            <Link className='hover:underline' to='/signup'>
+              Registrera
+            </Link>
+          </nav>
+        )}
+      </aside>
 
-        {/* Skyddade routes */}
-        <Route element={<ProtectedRoute />}>
-          <Route path='/' element={<Dashboard />} />
-          {/* <Route path='/trip/:id' element={<TripDetails />} />
-          <Route path='/add-trip' element={<AddTrip />} />
-          <Route path='/live-trip' element={<LiveTrip />} />
-          <Route path='/boats' element={<Boats />} />
-          <Route path='/places' element={<Places />} />
-          <Route path='/profile' element={<Profile />} />
-          <Route path='/service-logs' element={<ServiceLogs />} /> */}
-        </Route>
-      </Routes>
-    </Router>
+      <main className='p-6'>
+        {/* VIKTIGT: inga <Routes> här. Bara <Outlet> */}
+        <Outlet />
+      </main>
+    </div>
   );
 }
-
-export default App;

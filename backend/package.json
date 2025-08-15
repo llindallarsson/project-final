@@ -1,23 +1,27 @@
 {
-  "name": "project-final-backend",
+  "name": "vindra-backend",
   "version": "1.0.0",
-  "description": "Server part of final project",
+  "type": "commonjs",
+  "main": "server.js",
   "scripts": {
     "build": "babel . --out-dir dist --ignore node_modules",
     "start": "node dist/server.js",
     "dev": "nodemon server.js --exec babel-node"
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@babel/core": "^7.17.9",
     "@babel/node": "^7.16.8",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "mongoose": "^8.4.0",
-    "nodemon": "^3.0.1"
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.5.2",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
+    "nodemon": "^3.1.0",
     "@babel/cli": "^7.28.0",
     "@babel/preset-env": "^7.28.0"
   }
