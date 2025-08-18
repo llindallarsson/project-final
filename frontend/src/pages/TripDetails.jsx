@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../store/auth";
+import { useNavigate } from "react-router-dom";
 import TripMap from "../components/TripMap";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -11,6 +12,7 @@ export default function TripDetails() {
   const token = useAuth((s) => s.token);
   const [trip, setTrip] = useState(null);
   const [error, setError] = useState("");
+  const nav = useNavigate();
 
   useEffect(() => {
     (async () => {
@@ -32,10 +34,36 @@ export default function TripDetails() {
     <div className='max-w-3xl mx-auto'>
       <div className='flex items-center justify-between mb-4'>
         <h2 className='text-2xl font-semibold'>{trip.title}</h2>
-        <Link to='/' className='text-sm underline'>
-          ← Tillbaka
-        </Link>
+        <div className='flex items-center gap-2'>
+          <button
+            className='px-3 py-1 rounded border'
+            onClick={() => nav(`/trips/${trip._id}/edit`)}
+          >
+            Edit
+          </button>
+          <button
+            className='px-3 py-1 rounded border text-red-600'
+            onClick={async () => {
+              if (!confirm("Delete this trip?")) return;
+              try {
+                await api(`/api/trips/${trip._id}`, {
+                  method: "DELETE",
+                  token,
+                });
+                nav("/");
+              } catch (e) {
+                alert(e.message);
+              }
+            }}
+          >
+            Delete
+          </button>
+          <a href='/' className='text-sm underline'>
+            ← Back
+          </a>
+        </div>
       </div>
+
       <p className='text-sm text-gray-600 mb-2'>
         {new Date(trip.date).toLocaleDateString()} ·{" "}
         {trip.durationMinutes ?? "-"} min
