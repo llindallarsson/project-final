@@ -29,6 +29,9 @@ export default function App() {
               <Link className='hover:underline' to='/places'>
                 Platser
               </Link>
+              <Link className='hover:underline' to='/track'>
+                Live loggning
+              </Link>
             </nav>
             <button
               onClick={doLogout}

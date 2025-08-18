@@ -20,6 +20,7 @@ import TripDetails from "./pages/TripDetails";
 import EditTrip from "./pages/EditTrip";
 import Boats from "./pages/Boats";
 import Places from "./pages/Places";
+import LiveTrack from "./pages/LiveTrack";
 
 const Protected = ({ children }) => {
   const token = useAuth((s) => s.token);
@@ -78,6 +79,14 @@ const router = createBrowserRouter([
         element: (
           <Protected>
             <Places />
+          </Protected>
+        ),
+      },
+      {
+        path: "track",
+        element: (
+          <Protected>
+            <LiveTrack />
           </Protected>
         ),
       },
