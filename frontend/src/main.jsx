@@ -17,6 +17,9 @@ import Signup from "./pages/Signup";
 import TripsPage from "./pages/TripsPage";
 import AddTrip from "./pages/AddTrip";
 import TripDetails from "./pages/TripDetails";
+import EditTrip from "./pages/EditTrip";
+import Boats from "./pages/Boats";
+import Places from "./pages/Places";
 
 const Protected = ({ children }) => {
   const token = useAuth((s) => s.token);
@@ -54,6 +57,30 @@ const router = createBrowserRouter([
       },
       { path: "login", element: <Login /> },
       { path: "signup", element: <Signup /> },
+      {
+        path: "trips/:id/edit",
+        element: (
+          <Protected>
+            <EditTrip />
+          </Protected>
+        ),
+      },
+      {
+        path: "boats",
+        element: (
+          <Protected>
+            <Boats />
+          </Protected>
+        ),
+      },
+      {
+        path: "places",
+        element: (
+          <Protected>
+            <Places />
+          </Protected>
+        ),
+      },
     ],
   },
 ]);

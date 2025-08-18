@@ -23,6 +23,12 @@ export default function App() {
               <Link className='hover:underline' to='/trips/new'>
                 Ny resa
               </Link>
+              <Link className='hover:underline' to='/boats'>
+                Båtar
+              </Link>
+              <Link className='hover:underline' to='/places'>
+                Platser
+              </Link>
             </nav>
             <button
               onClick={doLogout}
