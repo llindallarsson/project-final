@@ -12,6 +12,10 @@ export default function App() {
 
   return (
     <div className='min-h-screen grid grid-cols-[240px_1fr]'>
+      <a href='#main' className='sr-only focus:not-sr-only underline px-2 py-1'>
+        Hoppa till innehåll
+      </a>
+
       <aside className='bg-white border-r p-4 space-y-4'>
         <h1 className='text-2xl font-bold'>Vindra</h1>
         {token ? (
@@ -52,7 +56,7 @@ export default function App() {
         )}
       </aside>
 
-      <main className='p-6'>
+      <main id='main' className='p-4'>
         {/* VIKTIGT: inga <Routes> här. Bara <Outlet> */}
         <Outlet />
       </main>

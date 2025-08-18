@@ -97,7 +97,7 @@ export default function TripDetails() {
             <img
               key={idx}
               src={`${API_BASE}${src}`}
-              alt='trip'
+              alt={`Foto från ${new Date(trip.date).toLocaleDateString()}`}
               className='w-full h-28 object-cover rounded border'
             />
           ))}
