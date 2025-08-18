@@ -16,6 +16,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import TripsPage from "./pages/TripsPage";
 import AddTrip from "./pages/AddTrip";
+import TripDetails from "./pages/TripDetails";
 
 const Protected = ({ children }) => {
   const token = useAuth((s) => s.token);
@@ -24,7 +25,7 @@ const Protected = ({ children }) => {
 
 const router = createBrowserRouter([
   {
-    path: "/", // root-layout
+    path: "/",
     element: <App />,
     children: [
       {
@@ -34,12 +35,20 @@ const router = createBrowserRouter([
             <TripsPage />
           </Protected>
         ),
-      }, // "/" (index)
+      },
       {
         path: "trips/new",
         element: (
           <Protected>
             <AddTrip />
+          </Protected>
+        ),
+      },
+      {
+        path: "trips/:id",
+        element: (
+          <Protected>
+            <TripDetails />
           </Protected>
         ),
       },
