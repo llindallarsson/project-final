@@ -5,7 +5,7 @@ import { useAuth } from "../store/auth";
 import TripMap from "./TripMap";
 import PhotoPicker from "./PhotoPicker";
 
-export default function TripForm() {
+export default function TripForm({ initialTrip = null, mode = "create" }) {
   const nav = useNavigate();
   const token = useAuth((s) => s.token);
 
@@ -17,30 +17,47 @@ export default function TripForm() {
   const [notes, setNotes] = useState("");
   const [windDir, setWindDir] = useState("");
   const [windSpeedKn, setWindSpeedKn] = useState("");
-
-  // båtval
   const [boatId, setBoatId] = useState("");
-  const [boats, setBoats] = useState([]);
 
   // karta & foton
-  const [mode, setMode] = useState("draw"); // 'view' | 'set-start' | 'set-end' | 'draw'
-  const [start, setStart] = useState(null); // {lat,lng}
+  const [modeMap, setModeMap] = useState("draw");
+  const [start, setStart] = useState(null);
   const [end, setEnd] = useState(null);
-  const [route, setRoute] = useState([]); // [{lat,lng,t}]
-  const [files, setFiles] = useState([]); // File[]
+  const [route, setRoute] = useState([]);
+  const [files, setFiles] = useState([]); // nya filer för uppladdning
 
+  const [boats, setBoats] = useState([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Förifyll vid edit
+  useEffect(() => {
+    if (!initialTrip) return;
+    setTitle(initialTrip.title || "");
+    setDate(
+      initialTrip.date
+        ? new Date(initialTrip.date).toISOString().slice(0, 10)
+        : ""
+    );
+    setDurationMinutes(initialTrip.durationMinutes ?? "");
+    setCrewCsv(
+      Array.isArray(initialTrip.crew) ? initialTrip.crew.join(", ") : ""
+    );
+    setNotes(initialTrip.notes || "");
+    setWindDir(initialTrip.wind?.dir || "");
+    setWindSpeedKn(initialTrip.wind?.speedKn ?? "");
+    setBoatId(initialTrip.boatId || "");
+    setStart(initialTrip.start || null);
+    setEnd(initialTrip.end || null);
+    setRoute(initialTrip.route || []);
+  }, [initialTrip]);
 
   useEffect(() => {
     (async () => {
       try {
         const data = await api("/api/boats", { token });
         setBoats(data);
-      } catch (e) {
-        // boats är ett plus – om det failar kan man fortfarande skapa resa
-        console.warn("Failed to load boats", e);
-      }
+      } catch {}
     })();
   }, [token]);
 
@@ -77,18 +94,38 @@ export default function TripForm() {
 
     try {
       setSaving(true);
-      if (files.length > 0) {
-        const fd = new FormData();
-        fd.append("data", JSON.stringify(body));
-        files.forEach((f) => fd.append("photos", f));
-        await api("/api/trips", {
-          method: "POST",
-          body: fd,
-          token,
-          isMultipart: true,
-        });
+      if (mode === "edit" && initialTrip?._id) {
+        if (files.length > 0) {
+          const fd = new FormData();
+          fd.append("data", JSON.stringify(body));
+          files.forEach((f) => fd.append("photos", f));
+          await api(`/api/trips/${initialTrip._id}`, {
+            method: "PUT",
+            body: fd,
+            token,
+            isMultipart: true,
+          });
+        } else {
+          await api(`/api/trips/${initialTrip._id}`, {
+            method: "PUT",
+            body,
+            token,
+          });
+        }
       } else {
-        await api("/api/trips", { method: "POST", body, token });
+        if (files.length > 0) {
+          const fd = new FormData();
+          fd.append("data", JSON.stringify(body));
+          files.forEach((f) => fd.append("photos", f));
+          await api("/api/trips", {
+            method: "POST",
+            body: fd,
+            token,
+            isMultipart: true,
+          });
+        } else {
+          await api("/api/trips", { method: "POST", body, token });
+        }
       }
       nav("/");
     } catch (err) {
@@ -100,7 +137,9 @@ export default function TripForm() {
 
   return (
     <div className='max-w-3xl mx-auto'>
-      <h2 className='text-2xl font-semibold mb-4'>Logga en resa</h2>
+      <h2 className='text-2xl font-semibold mb-4'>
+        {mode === "edit" ? "Redigera resa" : "Logga en resa"}
+      </h2>
       {error && <p className='mb-3 text-red-600'>{error}</p>}
 
       <form
@@ -210,33 +249,32 @@ export default function TripForm() {
           </div>
         </div>
 
-        {/* Karta */}
         <div className='grid gap-2'>
           <div className='flex gap-2 flex-wrap'>
             <button
               type='button'
               className='px-3 py-1 rounded border'
-              onClick={() => setMode("set-start")}
+              onClick={() => setModeMap("set-start")}
             >
               Sätt start
             </button>
             <button
               type='button'
               className='px-3 py-1 rounded border'
-              onClick={() => setMode("set-end")}
+              onClick={() => setModeMap("set-end")}
             >
               Sätt slut
             </button>
             <button
               type='button'
               className='px-3 py-1 rounded border'
-              onClick={() => setMode("draw")}
+              onClick={() => setModeMap("draw")}
             >
               Rita rutt
             </button>
           </div>
           <TripMap
-            mode={mode}
+            mode={modeMap}
             start={start}
             end={end}
             route={route}
@@ -247,10 +285,14 @@ export default function TripForm() {
           />
         </div>
 
-        {/* Foton */}
         <div className='grid gap-2'>
-          <label className='font-medium'>Foton</label>
+          <label className='font-medium'>Lägg till nya foton</label>
           <PhotoPicker files={files} onChange={setFiles} />
+          {mode === "edit" && initialTrip?.photos?.length > 0 && (
+            <p className='text-xs text-gray-600'>
+              Befintliga foton behålls. Nya foton läggs till.
+            </p>
+          )}
         </div>
 
         <div className='flex gap-2 justify-end'>
@@ -265,7 +307,7 @@ export default function TripForm() {
             disabled={saving}
             className='px-4 py-2 rounded bg-blue-600 text-white'
           >
-            {saving ? "Sparar…" : "Spara resa"}
+            {saving ? "Sparar…" : mode === "edit" ? "Uppdatera" : "Spara resa"}
           </button>
         </div>
       </form>
