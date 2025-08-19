@@ -1,18 +1,19 @@
-import { useEffect, useState, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../store/auth";
-import { useNavigate } from "react-router-dom";
 import TripMap from "../components/TripMap";
+import Button from "../components/ui/Button";
+import { Card, CardHeader, CardContent } from "../components/ui/Card";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const BASE = import.meta.env.VITE_API_URL || "";
 
 export default function TripDetails() {
   const { id } = useParams();
+  const nav = useNavigate();
   const token = useAuth((s) => s.token);
   const [trip, setTrip] = useState(null);
-  const [error, setError] = useState("");
-  const nav = useNavigate();
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -20,88 +21,103 @@ export default function TripDetails() {
         const data = await api(`/api/trips/${id}`, { token });
         setTrip(data);
       } catch (e) {
-        setError(e.message);
+        setErr(e.message);
       }
     })();
   }, [id, token]);
 
-  if (error) return <p className='text-red-600'>{error}</p>;
+  async function handleDelete() {
+    if (!confirm("Delete this trip?")) return;
+    try {
+      await api(`/api/trips/${id}`, { method: "DELETE", token });
+      nav("/");
+    } catch (e) {
+      alert(e.message || "Delete failed");
+    }
+  }
+
+  if (err) return <p className='text-red-600'>{err}</p>;
   if (!trip) return <p>Laddar…</p>;
 
-  const crewLine = (trip.crew || []).join(", ");
-
   return (
-    <div className='max-w-3xl mx-auto'>
-      <div className='flex items-center justify-between mb-4'>
-        <h2 className='text-2xl font-semibold'>{trip.title}</h2>
-        <div className='flex items-center gap-2'>
-          <button
-            className='px-3 py-1 rounded border'
-            onClick={() => nav(`/trips/${trip._id}/edit`)}
-          >
-            Edit
-          </button>
-          <button
-            className='px-3 py-1 rounded border text-red-600'
-            onClick={async () => {
-              if (!confirm("Delete this trip?")) return;
-              try {
-                await api(`/api/trips/${trip._id}`, {
-                  method: "DELETE",
-                  token,
-                });
-                nav("/");
-              } catch (e) {
-                alert(e.message);
-              }
-            }}
-          >
+    <div className='max-w-4xl mx-auto space-y-4'>
+      <div className='flex items-center justify-between'>
+        <h1>{trip.title}</h1>
+        <div className='flex gap-2'>
+          <Link to={`/trips/${trip._id}/edit`}>
+            <Button variant='secondary'>Edit</Button>
+          </Link>
+          <Button variant='danger' onClick={handleDelete}>
             Delete
-          </button>
-          <a href='/' className='text-sm underline'>
-            ← Back
-          </a>
+          </Button>
+          <Link to='/'>
+            <Button variant='ghost'>← Back</Button>
+          </Link>
         </div>
       </div>
 
-      <p className='text-sm text-gray-600 mb-2'>
-        {new Date(trip.date).toLocaleDateString()} ·{" "}
-        {trip.durationMinutes ?? "-"} min
-      </p>
-      {crewLine && (
-        <p className='mb-2'>
-          <span className='font-medium'>Besättning:</span> {crewLine}
-        </p>
-      )}
-      {trip.wind && (trip.wind.dir || trip.wind.speedKn) && (
-        <p className='mb-2'>
-          <span className='font-medium'>Vind:</span> {trip.wind.dir || "-"} ·{" "}
-          {trip.wind.speedKn ?? "-"} kn
-        </p>
-      )}
-      {trip.notes && <p className='mb-4 whitespace-pre-wrap'>{trip.notes}</p>}
+      <Card>
+        <CardHeader>
+          <h3>Översikt</h3>
+        </CardHeader>
+        <CardContent className='grid gap-2'>
+          <div className='text-sm text-gray-700'>
+            Datum: <strong>{new Date(trip.date).toLocaleString()}</strong>
+          </div>
+          <div className='text-sm text-gray-700'>
+            Tid: <strong>{trip.durationMinutes ?? "-"} min</strong>
+          </div>
+          {trip.crew?.length > 0 && (
+            <div className='text-sm text-gray-700'>
+              Besättning: <strong>{trip.crew.join(", ")}</strong>
+            </div>
+          )}
+          {(trip.wind?.dir || trip.wind?.speedKn) && (
+            <div className='text-sm text-gray-700'>
+              Vind:{" "}
+              <strong>
+                {trip.wind?.dir || ""}{" "}
+                {trip.wind?.speedKn ? `${trip.wind.speedKn} kn` : ""}
+              </strong>
+            </div>
+          )}
+          {trip.notes && <p className='mt-2'>{trip.notes}</p>}
+        </CardContent>
+      </Card>
 
-      <div className='mb-4'>
-        <TripMap
-          mode='view'
-          start={trip.start}
-          end={trip.end}
-          route={trip.route || []}
-          height={320}
-        />
-      </div>
+      <Card>
+        <CardHeader>
+          <h3>Karta</h3>
+        </CardHeader>
+        <CardContent>
+          <TripMap
+            mode='view'
+            start={trip.start}
+            end={trip.end}
+            route={trip.route}
+            height={360}
+          />
+        </CardContent>
+      </Card>
 
-      {Array.isArray(trip.photos) && trip.photos.length > 0 && (
-        <div className='grid grid-cols-3 gap-2'>
-          {trip.photos.map((src, idx) => (
-            <img
-              key={idx}
-              src={`${API_BASE}${src}`}
-              alt={`Foto från ${new Date(trip.date).toLocaleDateString()}`}
-              className='w-full h-28 object-cover rounded border'
-            />
-          ))}
-        </div>
+      {trip.photos?.length > 0 && (
+        <Card>
+          <CardHeader>
+            <h3>Bilder</h3>
+          </CardHeader>
+          <CardContent>
+            <div className='grid grid-cols-2 md:grid-cols-3 gap-2'>
+              {trip.photos.map((p, i) => (
+                <img
+                  key={i}
+                  src={`${BASE}${p}`}
+                  alt={`Foto från ${new Date(trip.date).toLocaleDateString()}`}
+                  className='w-full h-40 object-cover rounded-xl border'
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
