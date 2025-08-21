@@ -176,6 +176,99 @@ app.post("/api/auth/login", async (req, res) => {
   return res.json({ token: signToken(user) });
 });
 
+app.get("/api/me", auth, async (req, res) => {
+  const user = await User.findById(req.userId).lean();
+  if (!user) return res.status(404).json({ message: "Not found" });
+  // returnera bara säkra fält
+  res.json({
+    email: user.email,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  });
+});
+
+app.put("/api/me/email", auth, async (req, res) => {
+  const { email, currentPassword } = req.body || {};
+  if (!email || !currentPassword) {
+    return res
+      .status(400)
+      .json({ message: "Email and currentPassword required" });
+  }
+
+  const user = await User.findById(req.userId);
+  if (!user) return res.status(404).json({ message: "Not found" });
+
+  const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!ok) return res.status(401).json({ message: "Invalid password" });
+
+  const exists = await User.findOne({ email, _id: { $ne: user._id } });
+  if (exists) return res.status(409).json({ message: "Email already in use" });
+
+  user.email = email;
+  await user.save();
+
+  // ge nytt JWT så FE kan uppdatera token om ni vill
+  return res.json({ email: user.email, token: signToken(user) });
+});
+
+app.put("/api/me/password", auth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!currentPassword || !newPassword) {
+    return res
+      .status(400)
+      .json({ message: "currentPassword and newPassword required" });
+  }
+
+  const user = await User.findById(req.userId);
+  if (!user) return res.status(404).json({ message: "Not found" });
+
+  const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!ok) return res.status(401).json({ message: "Invalid password" });
+
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  await user.save();
+
+  // valfritt: returnera nytt token
+  return res.json({ ok: true, token: signToken(user) });
+});
+
+// --- Delete account (cascading)
+app.delete("/api/me", auth, async (req, res) => {
+  const { confirm } = req.body || {};
+  if (confirm !== "DELETE") {
+    return res
+      .status(400)
+      .json({ message: "Confirm by sending { confirm: 'DELETE' }" });
+  }
+
+  const userId = req.userId;
+
+  // ta bort fotofiler som refereras av trips (om de finns)
+  try {
+    const trips = await Trip.find({ userId }, { photos: 1 }).lean();
+    for (const t of trips) {
+      for (const rel of t.photos || []) {
+        try {
+          // rel är typ "/uploads/fil.jpg" → mappa till fysisk path
+          const relPath = rel.replace(/^\//, ""); // "uploads/fil.jpg"
+          const abs = path.join(__dirname, relPath);
+          if (fs.existsSync(abs)) fs.unlinkSync(abs);
+        } catch (_) {}
+      }
+    }
+  } catch (_) {}
+
+  await Promise.all([
+    Trip.deleteMany({ userId }),
+    Boat.deleteMany({ userId }),
+    Place.deleteMany({ userId }),
+    TrackingSession.deleteMany({ userId }),
+    User.deleteOne({ _id: userId }),
+  ]);
+
+  return res.json({ ok: true });
+});
+
 /* ------------------------------ Trips ---------------------------- */
 // GET alla trips (din användare)
 app.get("/api/trips", auth, async (req, res) => {
