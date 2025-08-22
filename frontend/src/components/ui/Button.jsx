@@ -6,9 +6,10 @@ const sizes = {
   lg: "h-11 px-5",
 };
 const variants = {
-  primary: "bg-vindra-600 text-white hover:bg-vindra-700",
-  secondary: "bg-white text-gray-900 border hover:bg-gray-50",
-  ghost: "bg-transparent text-gray-700 hover:bg-gray-100",
+  primary: "bg-brand-primary text-white hover:bg-brand-primary-600",
+  secondary: "bg-brand-secondary text-white hover:bg-brand-secondary-600",
+  accent: "bg-brand-accent text-white hover:bg-brand-accent-600",
+  ghost: "bg-transparent text-brand-primary hover:bg-brand-surface-200",
   danger: "bg-red-600 text-white hover:bg-red-700",
 };
 
