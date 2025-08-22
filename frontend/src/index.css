@@ -20,3 +20,7 @@
     @apply outline-none ring-4 ring-brand-secondary/30;
   }
 }
+
+.leaflet-container {
+  z-index: 0 !important;
+}

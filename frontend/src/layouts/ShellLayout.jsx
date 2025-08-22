@@ -127,18 +127,26 @@ export default function ShellLayout() {
         </div>
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer (always above maps) */}
       <div
-        className={`md:hidden fixed inset-0 z-50 transition ${
+        className={`md:hidden fixed inset-0 z-[1000] transition ${
           open ? "" : "pointer-events-none"
         }`}
         aria-hidden={!open}
         onClick={() => setOpen(false)}
       >
+        {/* Backdrop under panel */}
+        <div
+          className={`absolute inset-0 bg-black/30 transition-opacity z-[1000] ${
+            open ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        {/* Panel över backdropen */}
         <div
           className={`absolute inset-y-0 left-0 w-80 max-w-[85%] border-r border-white/20 shadow-xl
-                      transition-transform duration-200
-                      ${open ? "translate-x-0" : "-translate-x-full"}`}
+                bg-transparent z-[1010]
+                transition-transform duration-200
+                ${open ? "translate-x-0" : "-translate-x-full"}`}
           onClick={(e) => e.stopPropagation()}
         >
           <DrawerContent
@@ -147,11 +155,6 @@ export default function ShellLayout() {
             onLogout={handleLogout}
           />
         </div>
-        <div
-          className={`absolute inset-0 bg-black/30 transition-opacity ${
-            open ? "opacity-100" : "opacity-0"
-          }`}
-        />
       </div>
 
       {/* Content area (pushas åt höger av den fasta menyn) */}
@@ -162,7 +165,7 @@ export default function ShellLayout() {
       {/* Dialog: Välj typ av loggning */}
       {logMenuOpen && (
         <div
-          className='fixed inset-0 z-[60] grid place-items-center bg-black/40 p-4'
+          className='fixed inset-0 z-[2000] grid place-items-center bg-black/40 p-4'
           role='dialog'
           aria-modal='true'
           onClick={() => setLogMenuOpen(false)}
