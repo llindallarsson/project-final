@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../store/auth";
+import { Waves, Ship, MapPin, User, PlusCircle, LogOut } from "lucide-react";
 
-function MenuItem({ to, label, onClick }) {
-  // NavLink stödjer render-prop som ger isActive
+function MenuItem({ to, label, Icon, onClick }) {
   return (
     <NavLink
       to={to}
@@ -20,16 +20,12 @@ function MenuItem({ to, label, onClick }) {
     >
       {({ isActive }) => (
         <>
-          <span className='h-5 w-5 rounded-full border border-white/70 grid place-items-center'>
-            <span
-              className={`h-2.5 w-2.5 rounded-full transition
-                ${
-                  isActive
-                    ? "bg-white"
-                    : "bg-transparent group-hover:bg-white/60"
-                }`}
-            />
-          </span>
+          <Icon
+            size={18}
+            className={`shrink-0 transition ${
+              isActive ? "opacity-100" : "opacity-80 group-hover:opacity-100"
+            }`}
+          />
           <span className='font-medium'>{label}</span>
         </>
       )}
@@ -54,28 +50,27 @@ function DrawerContent({ onClose, onOpenLogMenu, onLogout }) {
       </div>
 
       <nav className='mt-1 space-y-2'>
-        <MenuItem to='/' label='Resor' onClick={onClose} />
-        <MenuItem to='/boats' label='Båtar' onClick={onClose} />
-        <MenuItem to='/places' label='Hamnar' onClick={onClose} />
-        <MenuItem to='/track' label='Serviceloggar' onClick={onClose} />
-        {/* OBS: “Serviceloggar” pekar nu till /track bara som placeholder.
-            När du har en riktig sida, byt till /service-logs */}
-        <MenuItem to='/profile' label='Profil' onClick={onClose} />
+        <MenuItem to='/' label='Resor' Icon={Waves} onClick={onClose} />
+        <MenuItem to='/boats' label='Båtar' Icon={Ship} onClick={onClose} />
+        <MenuItem to='/places' label='Hamnar' Icon={MapPin} onClick={onClose} />
+        <MenuItem to='/profile' label='Profil' Icon={User} onClick={onClose} />
       </nav>
 
       <hr className='border-white/30 my-2' />
 
       <button
         onClick={onOpenLogMenu}
-        className='w-full rounded-xl bg-brand-accent hover:bg-brand-accent-600 text-white font-semibold py-2.5 shadow-soft'
+        className='w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-accent hover:bg-brand-accent-600 text-white font-semibold py-2.5 shadow-soft'
       >
-        + Logga resa
+        <PlusCircle size={18} />
+        Logga resa
       </button>
 
       <button
         onClick={onLogout}
-        className='w-full rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold py-2.5'
+        className='w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold py-2.5'
       >
+        <LogOut size={18} />
         Logga ut
       </button>
 
@@ -87,8 +82,8 @@ function DrawerContent({ onClose, onOpenLogMenu, onLogout }) {
 }
 
 export default function ShellLayout() {
-  const [open, setOpen] = useState(false); // mobil-drawer
-  const [logMenuOpen, setLogMenuOpen] = useState(false); // val-dialog för "Logga resa"
+  const [open, setOpen] = useState(false);
+  const [logMenuOpen, setLogMenuOpen] = useState(false);
   const nav = useNavigate();
   const logout = useAuth((s) => s.logout);
 
@@ -158,7 +153,7 @@ export default function ShellLayout() {
         />
       </div>
 
-      {/* Content area */}
+      {/* Content */}
       <main className='flex-1 w-full px-4 md:px-8 pt-16 md:pt-6'>
         <Outlet />
       </main>
