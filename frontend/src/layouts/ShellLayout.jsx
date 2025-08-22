@@ -1,3 +1,4 @@
+// src/layouts/ShellLayout.jsx
 import { useState } from "react";
 import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../store/auth";
@@ -35,7 +36,7 @@ function MenuItem({ to, label, Icon, onClick }) {
 
 function DrawerContent({ onClose, onOpenLogMenu, onLogout }) {
   return (
-    <div className='h-full flex flex-col gap-4 p-4 bg-gradient-to-b from-brand-primary to-brand-secondary text-white'>
+    <div className='h-full overflow-y-auto flex flex-col gap-4 p-4 bg-gradient-to-b from-brand-primary to-brand-secondary text-white'>
       <div className='flex items-center justify-between'>
         <Link to='/' className='flex items-center gap-2' onClick={onClose}>
           <span className='text-2xl font-semibold tracking-tight'>Vindra.</span>
@@ -99,9 +100,9 @@ export default function ShellLayout() {
   };
 
   return (
-    <div className='min-h-screen bg-brand-surface-100 text-gray-900 flex'>
-      {/* Desktop sidebar */}
-      <aside className='hidden md:flex md:w-72 md:flex-col'>
+    <div className='min-h-screen bg-brand-surface-100 text-gray-900'>
+      {/* Desktop fixed sidebar (100vh) */}
+      <aside className='hidden md:block fixed inset-y-0 left-0 w-72 h-screen z-30'>
         <DrawerContent
           onClose={() => {}}
           onOpenLogMenu={() => setLogMenuOpen(true)}
@@ -153,8 +154,8 @@ export default function ShellLayout() {
         />
       </div>
 
-      {/* Content */}
-      <main className='flex-1 w-full px-4 md:px-8 pt-16 md:pt-6'>
+      {/* Content area (pushas åt höger av den fasta menyn) */}
+      <main className='flex-1 w-full px-4 md:px-8 pt-16 md:pt-6 md:ml-72'>
         <Outlet />
       </main>
 
