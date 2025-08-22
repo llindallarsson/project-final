@@ -11,21 +11,12 @@
   body {
     @apply bg-brand-surface-100 text-gray-900 font-ui;
   }
-
-  /* Länkar (ersätter text-vindra-600 / hover:text-vindra-700) */
-  a {
-    @apply text-brand-secondary hover:text-brand-secondary-600 underline;
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight;
   }
-
   :focus-visible {
     @apply outline-none ring-4 ring-brand-secondary/30;
-  }
-}
-
-@layer components {
-  /* Form inputs (ersätter ring-vindra-300 / border-vindra-400) */
-  .form-input {
-    @apply w-full border border-brand-border rounded-md px-3 py-2 outline-none
-           focus:ring-2 focus:ring-brand-secondary/30 focus:border-brand-secondary;
   }
 }

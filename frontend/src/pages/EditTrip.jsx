@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../store/auth";
 import TripForm from "../components/TripForm";
-import Spinner from "../components/Spinner";
 
 export default function EditTrip() {
   const { id } = useParams();
@@ -23,7 +22,7 @@ export default function EditTrip() {
   }, [id, token]);
 
   if (error) return <p className='text-red-600'>{error}</p>;
-  if (!trip) return <Spinner label='Laddar resa…' />;
+  if (!trip) return <p>Laddar…</p>;
 
   return <TripForm initialTrip={trip} mode='edit' />;
 }

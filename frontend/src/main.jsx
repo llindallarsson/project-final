@@ -1,4 +1,3 @@
-// src/main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import {
@@ -9,8 +8,8 @@ import {
 import "./index.css";
 import "leaflet/dist/leaflet.css";
 
-import App from "./App";
 import { useAuth } from "./store/auth";
+import ShellLayout from "./layouts/ShellLayout";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -21,77 +20,43 @@ import EditTrip from "./pages/EditTrip";
 import Boats from "./pages/Boats";
 import Places from "./pages/Places";
 import LiveTrack from "./pages/LiveTrack";
+import Profile from "./pages/Profile";
 
+// Simple Protected wrapper (behåll din befintliga logik)
 const Protected = ({ children }) => {
   const token = useAuth((s) => s.token);
   return token ? children : <Navigate to='/login' replace />;
 };
 
+// Router-konfiguration
 const router = createBrowserRouter([
+  // 🔓 Offentliga routes – ingen sidomeny här
+  { path: "/login", element: <Login /> },
+  { path: "/signup", element: <Signup /> },
+
+  // 🔐 Inloggat skal med sidomeny (desktop) / drawer (mobil)
   {
     path: "/",
-    element: <App />,
+    element: (
+      <Protected>
+        <ShellLayout />
+      </Protected>
+    ),
     children: [
-      {
-        index: true,
-        element: (
-          <Protected>
-            <TripsPage />
-          </Protected>
-        ),
-      },
-      {
-        path: "trips/new",
-        element: (
-          <Protected>
-            <AddTrip />
-          </Protected>
-        ),
-      },
-      {
-        path: "trips/:id",
-        element: (
-          <Protected>
-            <TripDetails />
-          </Protected>
-        ),
-      },
-      { path: "login", element: <Login /> },
-      { path: "signup", element: <Signup /> },
-      {
-        path: "trips/:id/edit",
-        element: (
-          <Protected>
-            <EditTrip />
-          </Protected>
-        ),
-      },
-      {
-        path: "boats",
-        element: (
-          <Protected>
-            <Boats />
-          </Protected>
-        ),
-      },
-      {
-        path: "places",
-        element: (
-          <Protected>
-            <Places />
-          </Protected>
-        ),
-      },
-      {
-        path: "track",
-        element: (
-          <Protected>
-            <LiveTrack />
-          </Protected>
-        ),
-      },
+      { index: true, element: <TripsPage /> },
+      { path: "trips/new", element: <AddTrip /> },
+      { path: "trips/:id", element: <TripDetails /> },
+      { path: "trips/:id/edit", element: <EditTrip /> },
+
+      { path: "boats", element: <Boats /> },
+      { path: "places", element: <Places /> },
+      { path: "track", element: <LiveTrack /> },
+      { path: "profile", element: <Profile /> },
     ],
   },
+
+  // Fallback
+  { path: "*", element: <Navigate to='/login' replace /> },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
