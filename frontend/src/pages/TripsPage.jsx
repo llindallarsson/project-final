@@ -147,10 +147,10 @@ export default function TripsPage() {
         value={tf}
         onChange={setTf}
         options={[
-          { value: TF.WEEK, label: "V" },
-          { value: TF.MONTH, label: "M" },
-          { value: TF.YEAR, label: "Å" },
-          { value: TF.ALL, label: "Alla" },
+          { value: TF.WEEK, labelSm: "V", labelLg: "Vecka" },
+          { value: TF.MONTH, labelSm: "M", labelLg: "Månad" },
+          { value: TF.YEAR, labelSm: "Å", labelLg: "År" },
+          { value: TF.ALL, labelSm: "Alla", labelLg: "Alla" },
         ]}
       />
 

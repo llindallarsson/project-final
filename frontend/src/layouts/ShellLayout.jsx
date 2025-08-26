@@ -158,8 +158,10 @@ export default function ShellLayout() {
       </div>
 
       {/* Content area (pushas åt höger av den fasta menyn) */}
-      <main className='flex-1 w-full px-4 md:px-8 pt-16 md:pt-6 md:ml-72'>
-        <Outlet />
+      <main className='min-w-0 overflow-x-hidden pt-14 md:pt-6 md:ml-72'>
+        <div className='mx-auto max-w-6xl px-4 md:px-6'>
+          <Outlet />
+        </div>
       </main>
 
       {/* Mobile FAB: + Logga resa */}

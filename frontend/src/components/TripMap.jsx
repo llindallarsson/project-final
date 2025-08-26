@@ -67,7 +67,7 @@ export default function TripMap({
   }, [start, end, route]);
 
   return (
-    <div style={{ height }} className='w-full overflow-hidden rounded border'>
+    <div style={{ height }} className='w-full h-full overflow-hidden border'>
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={zoom}

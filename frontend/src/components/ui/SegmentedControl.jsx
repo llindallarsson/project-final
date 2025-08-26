@@ -12,6 +12,9 @@ export default function SegmentedControl({
     >
       {options.map((opt) => {
         const active = opt.value === value;
+        const sm = opt.labelSm ?? opt.label ?? ""; // bakåtkompatibelt
+        const lg = opt.labelLg ?? opt.label ?? sm;
+
         return (
           <button
             key={opt.value}
@@ -26,7 +29,9 @@ export default function SegmentedControl({
                   : "text-gray-700 hover:bg-brand-surface-200"
               }`}
           >
-            {opt.label}
+            {/* Mobil: kort label, Desktop: lång label */}
+            <span className='md:hidden'>{sm}</span>
+            <span className='hidden md:inline'>{lg}</span>
           </button>
         );
       })}

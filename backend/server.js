@@ -57,8 +57,9 @@ const tripSchema = new mongoose.Schema(
     start: { lat: Number, lng: Number, name: String },
     end: { lat: Number, lng: Number, name: String },
     route: [{ lat: Number, lng: Number, t: String }],
-    wind: { dir: String, speedKn: Number },
+    wind: { dir: String, speedMs: Number },
     weather: String,
+    distanceNm: Number,
     photos: [{ type: String }],
   },
   { timestamps: true }
