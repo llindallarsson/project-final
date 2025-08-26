@@ -1,14 +1,14 @@
-import { useMemo } from "react";
 import L from "leaflet";
 import {
   MapContainer,
   TileLayer,
   Marker,
   Polyline,
+  useMap,
   useMapEvents,
 } from "react-leaflet";
 
-// Fixa Leaflet-markörernas ikoner (behövs i bundlers som Vite)
+// Fix för Leaflet-ikoner (behövs med Vite)
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -35,16 +35,20 @@ function ClickHandler({ mode, setStart, setEnd, route, setRoute }) {
 }
 
 /**
- * TripMap
+ * TripMap (utan auto-zoom)
+ *
  * Props:
  * - mode: 'view' | 'set-start' | 'set-end' | 'draw'
- * - start: { lat, lng }
- * - end: { lat, lng }
+ * - start: { lat, lng } | null
+ * - end:   { lat, lng } | null
  * - route: [{ lat, lng, t }]
- * - setStart, setEnd, setRoute: setters för interaktion
- * - center: { lat, lng } (default: Stockholm)
- * - zoom: number (default 9)
- * - height: number (px)
+ * - setStart, setEnd, setRoute: optional setters
+ * - center: { lat, lng } initialt (default Sthlm)
+ * - zoom: number initialt (default 9)
+ * - height: number | string (px eller '100%')
+ * - className: extra klasser
+ * - autoFit: boolean (default false) — vi använder INTE detta här (lämnas för ev. framtid)
+ * - showRecenter: boolean (default true) — visar en liten knapp för att centrera manuellt
  */
 export default function TripMap({
   mode = "view",
@@ -54,28 +58,34 @@ export default function TripMap({
   setStart,
   setEnd,
   setRoute,
-  center = { lat: 59.325, lng: 18.07 }, // Stockholm default
+  center = { lat: 59.325, lng: 18.07 },
   zoom = 9,
   height = 320,
+  className = "",
+  autoFit = false, // ej använd nu, men kvar om du skulle vilja aktivera framöver
+  showRecenter = true,
 }) {
-  const bounds = useMemo(() => {
-    const pts = [];
-    if (start?.lat && start?.lng) pts.push([start.lat, start.lng]);
-    if (end?.lat && end?.lng) pts.push([end.lat, end.lng]);
-    if (Array.isArray(route)) route.forEach((p) => pts.push([p.lat, p.lng]));
-    return pts.length > 0 ? L.latLngBounds(pts) : null;
-  }, [start, end, route]);
+  const style = {
+    height: typeof height === "number" ? `${height}px` : height || "320px",
+    width: "100%",
+  };
+
+  const isDrawing = mode === "draw";
+
+  const polylinePositions =
+    Array.isArray(route) && route.length > 1
+      ? route.map((p) => [p.lat, p.lng])
+      : null;
 
   return (
-    <div style={{ height }} className='w-full h-full overflow-hidden border'>
+    <div style={style} className={`w-full overflow-hidden border ${className}`}>
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={zoom}
-        bounds={bounds || undefined}
         style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          attribution='&copy; OpenStreetMap contributors'
           url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
         />
 
@@ -83,8 +93,16 @@ export default function TripMap({
           <Marker position={[start.lat, start.lng]} />
         )}
         {end?.lat && end?.lng && <Marker position={[end.lat, end.lng]} />}
-        {Array.isArray(route) && route.length > 1 && (
-          <Polyline positions={route.map((p) => [p.lat, p.lng])} />
+
+        {polylinePositions && (
+          <Polyline
+            positions={polylinePositions}
+            pathOptions={{
+              weight: 4,
+              opacity: 0.9,
+              ...(isDrawing ? { dashArray: "6 8" } : {}),
+            }}
+          />
         )}
 
         <ClickHandler
