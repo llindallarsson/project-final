@@ -6,6 +6,42 @@ import TripMap from "./TripMap";
 import PhotoPicker from "./PhotoPicker";
 import { Sun, CloudSun, Cloud, CloudRain, CloudLightning } from "lucide-react";
 
+// --- Reverse geocode (OSM/Nominatim) med enkel cache ---
+const _geoCache = new Map();
+async function reverseGeocodeLatLng(lat, lng) {
+  const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+  if (_geoCache.has(key)) return _geoCache.get(key);
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=sv&zoom=14`;
+    const res = await fetch(url, {
+      headers: {
+        // Nominatim gillar tydliga headers. Referer skickas av browsern automatiskt.
+        Accept: "application/json",
+      },
+    });
+    const data = await res.json();
+    const nice =
+      data?.name ||
+      data?.address?.harbour ||
+      data?.address?.marina ||
+      data?.address?.neighbourhood ||
+      data?.address?.suburb ||
+      data?.address?.village ||
+      data?.address?.town ||
+      data?.address?.city ||
+      (data?.display_name ? String(data.display_name).split(",")[0] : null);
+
+    const label = nice || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    _geoCache.set(key, label);
+    return label;
+  } catch {
+    const fallback = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    _geoCache.set(key, fallback);
+    return fallback;
+  }
+}
+
 const WEATHER_OPTS = [
   { key: "sunny", label: "Sol", Icon: Sun },
   { key: "partly", label: "Sol + moln", Icon: CloudSun },
@@ -226,27 +262,26 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
     if (!(pickerEnabled && pickerTarget === "route")) return;
     if (!Array.isArray(route) || route.length === 0) return;
 
-    if ((!start || startAuto) && route.length >= 1) {
-      const p0 = route[0];
-      setStart({ lat: p0.lat, lng: p0.lng, name: startName || "Start" });
-      setStartAuto(true);
-    }
-    if (route.length >= 1 && (endAuto || !end)) {
-      const last = route[route.length - 1];
-      setEnd({ lat: last.lat, lng: last.lng, name: endName || "Mål" });
-      setEndAuto(true);
-    }
-  }, [
-    route,
-    pickerEnabled,
-    pickerTarget,
-    start,
-    end,
-    startAuto,
-    endAuto,
-    startName,
-    endName,
-  ]);
+    (async () => {
+      // Start: första punkten (om inte manuellt satt)
+      if ((!start || startAuto) && route.length >= 1) {
+        const p0 = route[0];
+        const label0 = await reverseGeocodeLatLng(p0.lat, p0.lng);
+        setStart({ lat: p0.lat, lng: p0.lng, name: label0 });
+        setStartName(label0);
+        setStartAuto(true);
+      }
+
+      // Slut: sista punkten följer medan du ritar
+      if (route.length >= 1 && (endAuto || !end)) {
+        const last = route[route.length - 1];
+        const labelLast = await reverseGeocodeLatLng(last.lat, last.lng);
+        setEnd({ lat: last.lat, lng: last.lng, name: labelLast });
+        setEndName(labelLast);
+        setEndAuto(true);
+      }
+    })();
+  }, [route, pickerEnabled, pickerTarget, start, end, startAuto, endAuto]);
 
   /* Auto-distans från karta */
   useEffect(() => {
@@ -507,13 +542,25 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
               start={start}
               end={end}
               route={route}
-              setStart={(p) => {
+              setStart={async (p) => {
+                // sätt marker direkt
                 setStart(p);
-                if (!startName) setStartName("Start");
+                // hämta namn/koordinater och uppdatera både objekt + inputfält
+                const label = await reverseGeocodeLatLng(p.lat, p.lng);
+                setStart((prev) =>
+                  prev ? { ...prev, name: label } : { ...p, name: label }
+                );
+                setStartName(label);
+                setStartAuto(false);
               }}
-              setEnd={(p) => {
+              setEnd={async (p) => {
                 setEnd(p);
-                if (!endName) setEndName("Mål");
+                const label = await reverseGeocodeLatLng(p.lat, p.lng);
+                setEnd((prev) =>
+                  prev ? { ...prev, name: label } : { ...p, name: label }
+                );
+                setEndName(label);
+                setEndAuto(false);
               }}
               setRoute={setRoute}
               height={300}
@@ -758,13 +805,23 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
           start={start}
           end={end}
           route={route}
-          setStart={(p) => {
+          setStart={async (p) => {
             setStart(p);
-            if (!startName) setStartName("Start");
+            const label = await reverseGeocodeLatLng(p.lat, p.lng);
+            setStart((prev) =>
+              prev ? { ...prev, name: label } : { ...p, name: label }
+            );
+            setStartName(label);
+            setStartAuto(false);
           }}
-          setEnd={(p) => {
+          setEnd={async (p) => {
             setEnd(p);
-            if (!endName) setEndName("Mål");
+            const label = await reverseGeocodeLatLng(p.lat, p.lng);
+            setEnd((prev) =>
+              prev ? { ...prev, name: label } : { ...p, name: label }
+            );
+            setEndName(label);
+            setEndAuto(false);
           }}
           setRoute={setRoute}
           height='100%'
