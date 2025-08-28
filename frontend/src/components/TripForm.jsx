@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../store/auth";
@@ -6,8 +6,11 @@ import TripMap from "./TripMap";
 import PhotoPicker from "./PhotoPicker";
 import { Sun, CloudSun, Cloud, CloudRain, CloudLightning } from "lucide-react";
 
-// --- Reverse geocode (OSM/Nominatim) med enkel cache ---
+/* --------------------------------------------
+ * Reverse geocoding (OSM / Nominatim) + simple cache
+ * -------------------------------------------- */
 const _geoCache = new Map();
+
 async function reverseGeocodeLatLng(lat, lng) {
   const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
   if (_geoCache.has(key)) return _geoCache.get(key);
@@ -16,11 +19,12 @@ async function reverseGeocodeLatLng(lat, lng) {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=sv&zoom=14`;
     const res = await fetch(url, {
       headers: {
-        // Nominatim gillar tydliga headers. Referer skickas av browsern automatiskt.
+        // Keep headers explicit; browser will send Referer automatically
         Accept: "application/json",
       },
     });
     const data = await res.json();
+
     const nice =
       data?.name ||
       data?.address?.harbour ||
@@ -42,6 +46,9 @@ async function reverseGeocodeLatLng(lat, lng) {
   }
 }
 
+/* --------------------------------------------
+ * Weather presets for quick selection
+ * -------------------------------------------- */
 const WEATHER_OPTS = [
   { key: "sunny", label: "Sol", Icon: Sun },
   { key: "partly", label: "Sol + moln", Icon: CloudSun },
@@ -50,12 +57,18 @@ const WEATHER_OPTS = [
   { key: "storm", label: "Åska", Icon: CloudLightning },
 ];
 
+/* --------------------------------------------
+ * Helpers
+ * -------------------------------------------- */
 const DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
-/* --- Haversine i nautiska mil --- */
+function toRad(x) {
+  return (x * Math.PI) / 180;
+}
+
+// Haversine in nautical miles
 function haversineNm(a, b) {
   if (!a || !b) return 0;
-  const toRad = (x) => (x * Math.PI) / 180;
   const R_km = 6371;
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
@@ -67,6 +80,8 @@ function haversineNm(a, b) {
   const d_km = 2 * R_km * Math.asin(Math.sqrt(h));
   return d_km / 1.852; // km → NM
 }
+
+// Total route length in NM (polyline preferred; fallback to start↔end)
 function calcRouteNm(route, start, end) {
   if (Array.isArray(route) && route.length > 1) {
     let sum = 0;
@@ -78,7 +93,15 @@ function calcRouteNm(route, start, end) {
   return 0;
 }
 
-/* --- Liten autocomplete mot sparade Places --- */
+// Safe number parsing (accepts empty string)
+function numOrEmpty(v) {
+  const n = Number(v);
+  return Number.isNaN(n) ? "" : n;
+}
+
+/* --------------------------------------------
+ * Tiny autocomplete backed by saved Places
+ * -------------------------------------------- */
 function PlaceAutocomplete({
   value,
   onChange,
@@ -157,11 +180,14 @@ function PlaceAutocomplete({
   );
 }
 
+/* --------------------------------------------
+ * TripForm
+ * -------------------------------------------- */
 export default function TripForm({ initialTrip = null, mode = "create" }) {
   const token = useAuth((s) => s.token);
   const nav = useNavigate();
 
-  /* --- Basfält --- */
+  // Base fields
   const [title, setTitle] = useState(initialTrip?.title || "");
   const [date, setDate] = useState(
     initialTrip?.date
@@ -177,36 +203,37 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
     initialTrip?.durationMinutes ? initialTrip.durationMinutes % 60 : ""
   );
 
-  /* --- Vind (m/s) --- */
+  // Wind (m/s)
   const [windDir, setWindDir] = useState(initialTrip?.wind?.dir || "");
   const [windMs, setWindMs] = useState(
     initialTrip?.wind?.speedMs != null ? String(initialTrip.wind.speedMs) : ""
   );
 
-  /* --- Väder & Båt --- */
+  // Weather & Boat
   const [weather, setWeather] = useState(initialTrip?.weather || "");
   const [boats, setBoats] = useState([]);
   const [boatId, setBoatId] = useState(initialTrip?.boatId || "");
 
-  /* --- Besättning & anteckningar --- */
+  // Crew & notes
   const [crewCsv, setCrewCsv] = useState(
     Array.isArray(initialTrip?.crew) ? initialTrip.crew.join(", ") : ""
   );
   const [notes, setNotes] = useState(initialTrip?.notes || "");
 
-  /* --- Platser & inputs --- */
+  // Places & inputs
   const [places, setPlaces] = useState([]);
   const [startName, setStartName] = useState(initialTrip?.start?.name || "");
   const [endName, setEndName] = useState(initialTrip?.end?.name || "");
 
-  /* --- Karta & rutt --- */
+  // Map & route
   const [start, setStart] = useState(initialTrip?.start || null);
   const [end, setEnd] = useState(initialTrip?.end || null);
-  const [startAuto, setStartAuto] = useState(false);
-  const [endAuto, setEndAuto] = useState(false);
+  const [startAuto, setStartAuto] = useState(false); // set by route drawing
+  const [endAuto, setEndAuto] = useState(false); // set by route drawing
   const [route, setRoute] = useState(initialTrip?.route || []);
   const [pickerEnabled, setPickerEnabled] = useState(false);
   const [pickerTarget, setPickerTarget] = useState("start"); // 'start' | 'end' | 'route'
+
   const derivedMapMode = !pickerEnabled
     ? "view"
     : pickerTarget === "start"
@@ -215,23 +242,25 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
     ? "set-end"
     : "draw";
 
-  /* --- Distans --- */
+  // Distance (NM)
   const [distanceNm, setDistanceNm] = useState(initialTrip?.distanceNm ?? "");
   const [calcFromMap, setCalcFromMap] = useState(true);
 
-  /* --- Bilder & UI --- */
+  // Files & UI
   const [files, setFiles] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  /* Ladda båtar & platser */
+  /* Load boats & places once (with guard) */
   useEffect(() => {
+    let alive = true;
     (async () => {
       try {
         const [bts, pls] = await Promise.all([
           api("/api/boats", { token }),
           api("/api/places", { token }),
         ]);
+        if (!alive) return;
         setBoats(bts || []);
         setPlaces(pls || []);
         if (!boatId && bts?.length === 1) setBoatId(bts[0]._id);
@@ -239,31 +268,41 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
         console.warn(e);
       }
     })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  /* Väljer plats → fyll koordinater */
-  function pickStartPlace(p) {
-    setStartName(p.name || "");
-    if (p.location?.lat && p.location?.lng) {
-      setStart({ lat: p.location.lat, lng: p.location.lng, name: p.name });
+  /* Shared handler for picking start/end on the map (reverse geocode + set UI name) */
+  const applyPickedPoint = useCallback(async (kind, p) => {
+    const label = await reverseGeocodeLatLng(p.lat, p.lng);
+    if (kind === "start") {
+      setStart((prev) =>
+        prev
+          ? { ...prev, lat: p.lat, lng: p.lng, name: label }
+          : { ...p, name: label }
+      );
+      setStartName(label);
       setStartAuto(false);
-    }
-  }
-  function pickEndPlace(p) {
-    setEndName(p.name || "");
-    if (p.location?.lat && p.location?.lng) {
-      setEnd({ lat: p.location.lat, lng: p.location.lng, name: p.name });
+    } else {
+      setEnd((prev) =>
+        prev
+          ? { ...prev, lat: p.lat, lng: p.lng, name: label }
+          : { ...p, name: label }
+      );
+      setEndName(label);
       setEndAuto(false);
     }
-  }
+  }, []);
 
-  /* Ritar rutt utan start/slut → sätt första/sista som start/slut, slut följer */
+  /* When drawing a route, auto-derive start (first) and end (last) with labels */
   useEffect(() => {
     if (!(pickerEnabled && pickerTarget === "route")) return;
     if (!Array.isArray(route) || route.length === 0) return;
 
     (async () => {
-      // Start: första punkten (om inte manuellt satt)
+      // Start: first point (only if not manually set or previously auto-set)
       if ((!start || startAuto) && route.length >= 1) {
         const p0 = route[0];
         const label0 = await reverseGeocodeLatLng(p0.lat, p0.lng);
@@ -272,7 +311,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
         setStartAuto(true);
       }
 
-      // Slut: sista punkten följer medan du ritar
+      // End: last point follows while drawing
       if (route.length >= 1 && (endAuto || !end)) {
         const last = route[route.length - 1];
         const labelLast = await reverseGeocodeLatLng(last.lat, last.lng);
@@ -283,14 +322,14 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
     })();
   }, [route, pickerEnabled, pickerTarget, start, end, startAuto, endAuto]);
 
-  /* Auto-distans från karta */
+  /* Auto-calc distance from map (route preferred) */
   useEffect(() => {
     if (!calcFromMap) return;
     const nm = calcRouteNm(route, start, end);
     setDistanceNm(nm ? nm.toFixed(2) : "");
   }, [calcFromMap, route, start, end]);
 
-  /* Submit */
+  /* Submit handler */
   async function onSubmit(e) {
     e.preventDefault();
     setError("");
@@ -314,7 +353,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
         : [],
       notes: notes || undefined,
       start: start ? { ...start, name: startName || start?.name } : undefined,
-      end: end ? { ...end, name: end?.name || endName } : undefined,
+      end: end ? { ...end, name: endName || end?.name } : undefined,
       route: route?.length ? route : undefined,
       wind:
         windDir || windMs !== ""
@@ -373,7 +412,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
 
   return (
     <div className='lg:grid lg:grid-cols-[minmax(360px,1fr)_400px] xl:grid-cols-[minmax(380px,1fr)_460px] lg:items-start gap-6 overflow-x-hidden'>
-      {/* LEFT: Formuläret */}
+      {/* LEFT: form */}
       <div className='min-w-0'>
         <h1 className='text-2xl md:text-3xl font-bold mb-4'>
           {mode === "edit" ? "Redigera resa" : "Logga en resa"}
@@ -389,7 +428,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
           onSubmit={onSubmit}
           className='grid gap-5 bg-white border p-4 md:p-6'
         >
-          {/* Rubrik */}
+          {/* Title */}
           <div className='grid gap-2'>
             <label className='font-medium' htmlFor='title'>
               Rubrik
@@ -404,7 +443,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
             />
           </div>
 
-          {/* Datum + tid */}
+          {/* Date + duration */}
           <div className='grid md:grid-cols-2 gap-4'>
             <div className='grid gap-2'>
               <label className='font-medium' htmlFor='date'>
@@ -428,7 +467,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
                   placeholder='h'
                   className='border px-3 py-2 w-20 outline-none focus:ring-2 focus:ring-brand-primary/30'
                   value={hours}
-                  onChange={(e) => setHours(e.target.value)}
+                  onChange={(e) => setHours(numOrEmpty(e.target.value))}
                 />
                 <span className='text-gray-600'>h</span>
                 <input
@@ -438,17 +477,17 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
                   placeholder='min'
                   className='border px-3 py-2 w-24 outline-none focus:ring-2 focus:ring-brand-primary/30'
                   value={mins}
-                  onChange={(e) => setMins(e.target.value)}
+                  onChange={(e) => setMins(numOrEmpty(e.target.value))}
                 />
                 <span className='text-gray-600'>min</span>
               </div>
             </div>
           </div>
 
-          {/* Start & Slut med dekorationskolumn */}
+          {/* Start & End with decorative column */}
           <label className='font-medium'>Start– och slutdestination</label>
           <div className='grid grid-cols-[24px_1fr] items-stretch gap-2'>
-            {/* Dekor: prick → streck → pin */}
+            {/* Decorative timeline */}
             <div
               className='flex flex-col items-center h-full py-2 select-none'
               aria-hidden
@@ -474,7 +513,16 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
                 noIcon
                 value={startName}
                 onChange={setStartName}
-                onPick={pickStartPlace}
+                onPick={(p) => {
+                  setPickerEnabled(true);
+                  setPickerTarget("start");
+                  if (p.location?.lat && p.location?.lng) {
+                    applyPickedPoint("start", {
+                      lat: p.location.lat,
+                      lng: p.location.lng,
+                    });
+                  }
+                }}
                 places={places}
                 placeholder='Välj startdestination, eller markera på kartan…'
                 onFocus={() => {
@@ -486,7 +534,16 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
                 noIcon
                 value={endName}
                 onChange={setEndName}
-                onPick={pickEndPlace}
+                onPick={(p) => {
+                  setPickerEnabled(true);
+                  setPickerTarget("end");
+                  if (p.location?.lat && p.location?.lng) {
+                    applyPickedPoint("end", {
+                      lat: p.location.lat,
+                      lng: p.location.lng,
+                    });
+                  }
+                }}
                 places={places}
                 placeholder='Välj slutdestination, eller markera på kartan…'
                 onFocus={() => {
@@ -497,7 +554,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
             </div>
           </div>
 
-          {/* Ruttactions */}
+          {/* Route actions */}
           <div className='mt-2 flex items-center gap-2'>
             <button
               type='button'
@@ -521,10 +578,12 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
                   setRoute([]);
                   if (startAuto) {
                     setStart(null);
+                    setStartName("");
                     setStartAuto(false);
                   }
                   if (endAuto) {
                     setEnd(null);
+                    setEndName("");
                     setEndAuto(false);
                   }
                 }}
@@ -535,39 +594,21 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
             )}
           </div>
 
-          {/* --- MOBIL/TABLET (≤1024px): karta i full bredd + Distans/Vind under --- */}
+          {/* --- MOBILE/TABLET: map full width + Distance/Wind below --- */}
           <section className='lg:hidden grid gap-4'>
             <TripMap
               mode={derivedMapMode}
               start={start}
               end={end}
               route={route}
-              setStart={async (p) => {
-                // sätt marker direkt
-                setStart(p);
-                // hämta namn/koordinater och uppdatera både objekt + inputfält
-                const label = await reverseGeocodeLatLng(p.lat, p.lng);
-                setStart((prev) =>
-                  prev ? { ...prev, name: label } : { ...p, name: label }
-                );
-                setStartName(label);
-                setStartAuto(false);
-              }}
-              setEnd={async (p) => {
-                setEnd(p);
-                const label = await reverseGeocodeLatLng(p.lat, p.lng);
-                setEnd((prev) =>
-                  prev ? { ...prev, name: label } : { ...p, name: label }
-                );
-                setEndName(label);
-                setEndAuto(false);
-              }}
+              setStart={(p) => applyPickedPoint("start", p)}
+              setEnd={(p) => applyPickedPoint("end", p)}
               setRoute={setRoute}
               height={300}
             />
 
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              {/* Distans */}
+              {/* Distance */}
               <div className='grid gap-2'>
                 <label className='font-medium'>Distans</label>
                 <div className='grid gap-2'>
@@ -596,7 +637,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
                 </div>
               </div>
 
-              {/* Vind */}
+              {/* Wind */}
               <div className='grid gap-2'>
                 <label className='font-medium'>Vind (m/s)</label>
                 <div className='flex items-center gap-2'>
@@ -627,9 +668,8 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
             </div>
           </section>
 
-          {/* --- DESKTOP (≥1024px): Distans & Vind i formulärspalten --- */}
+          {/* --- DESKTOP: Distance & Wind in the form column --- */}
           <div className='hidden lg:grid lg:grid-cols-2 gap-6'>
-            {/* Distans */}
             <div>
               <label className='font-medium'>Distans</label>
               <div className='mt-2 flex items-center gap-2'>
@@ -656,7 +696,6 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
               </label>
             </div>
 
-            {/* Vind */}
             <div>
               <label className='font-medium'>Vind (m/s)</label>
               <div className='mt-2 flex items-center gap-2'>
@@ -686,7 +725,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
             </div>
           </div>
 
-          {/* Båt & Besättning */}
+          {/* Boat & Crew */}
           <div className='grid md:grid-cols-2 gap-4'>
             <div className='grid gap-2'>
               <label className='font-medium' htmlFor='boat'>
@@ -699,7 +738,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
                 onChange={(e) => setBoatId(e.target.value)}
               >
                 <option value=''>
-                  {boats.length ? "Välj båt (valfritt)" : "Inga båtar ännu"}
+                  {boats.length ? "Välj båt (valfritt)" : "Inga båtar ännu"}{" "}
                 </option>
                 {boats.map((b) => (
                   <option key={b._id} value={b._id}>
@@ -722,7 +761,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
             </div>
           </div>
 
-          {/* Väder */}
+          {/* Weather */}
           <div className='grid gap-2'>
             <label className='font-medium'>Väder</label>
             <div className='flex gap-2 flex-wrap'>
@@ -749,7 +788,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
             </div>
           </div>
 
-          {/* Anteckningar */}
+          {/* Notes */}
           <div className='grid gap-2'>
             <label className='font-medium' htmlFor='notes'>
               Anteckningar
@@ -764,7 +803,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
             />
           </div>
 
-          {/* Bilder */}
+          {/* Photos */}
           <div className='grid gap-2'>
             <label className='font-medium'>Bilder</label>
             <PhotoPicker files={files} onChange={setFiles} />
@@ -798,31 +837,15 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
         </form>
       </div>
 
-      {/* RIGHT: sticky map på desktop */}
+      {/* RIGHT: sticky map on desktop */}
       <aside className='hidden lg:block sticky top-20 min-w-0 h-[calc(100vh-140px)] overflow-hidden'>
         <TripMap
           mode={derivedMapMode}
           start={start}
           end={end}
           route={route}
-          setStart={async (p) => {
-            setStart(p);
-            const label = await reverseGeocodeLatLng(p.lat, p.lng);
-            setStart((prev) =>
-              prev ? { ...prev, name: label } : { ...p, name: label }
-            );
-            setStartName(label);
-            setStartAuto(false);
-          }}
-          setEnd={async (p) => {
-            setEnd(p);
-            const label = await reverseGeocodeLatLng(p.lat, p.lng);
-            setEnd((prev) =>
-              prev ? { ...prev, name: label } : { ...p, name: label }
-            );
-            setEndName(label);
-            setEndAuto(false);
-          }}
+          setStart={(p) => applyPickedPoint("start", p)}
+          setEnd={(p) => applyPickedPoint("end", p)}
           setRoute={setRoute}
           height='100%'
         />

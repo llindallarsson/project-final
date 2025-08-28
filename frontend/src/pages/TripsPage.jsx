@@ -4,12 +4,16 @@ import { api } from "../api";
 import { useAuth } from "../store/auth";
 import TripCard from "../components/TripCard";
 import SegmentedControl from "../components/ui/SegmentedControl";
+import Button from "../components/ui/Button";
+import { Card, CardContent } from "../components/ui/Card";
 
+// Timeframe enum
 const TF = { WEEK: "week", MONTH: "month", YEAR: "year", ALL: "all" };
 
+/* ---------- Date helpers (Mon-based week) ---------- */
 function startOfWeek(d) {
   const x = new Date(d);
-  const day = (x.getDay() + 6) % 7; // måndag=0
+  const day = (x.getDay() + 6) % 7; // Monday = 0
   x.setDate(x.getDate() - day);
   x.setHours(0, 0, 0, 0);
   return x;
@@ -26,103 +30,114 @@ function startOfYear(d) {
   x.setHours(0, 0, 0, 0);
   return x;
 }
-function sameDay(a, b) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+
+/* ---------- Distance helpers (Haversine, NM) ---------- */
+const toRad = (x) => (x * Math.PI) / 180;
+function haversineNm(a, b) {
+  const R = 6371000; // meters
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return (2 * R * Math.asin(Math.sqrt(h))) / 1852; // to NM
+}
+function estimateDistanceNm(trip) {
+  if (trip?.route?.length > 1) {
+    let sum = 0;
+    for (let i = 1; i < trip.route.length; i++) {
+      sum += haversineNm(trip.route[i - 1], trip.route[i]);
+    }
+    return sum;
+  }
+  if (trip?.start?.lat && trip?.end?.lat) {
+    return haversineNm(trip.start, trip.end);
+  }
+  return 0;
 }
 
-// unik dagsräkning
+/* ---------- Unique sailing day counter ---------- */
 function countUniqueDays(trips) {
   const set = new Set();
   for (const t of trips) {
-    if (!t.date) continue;
+    if (!t?.date) continue;
     const d = new Date(t.date);
     set.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
   }
   return set.size;
 }
 
-// enkel NM-summering (samma som i TripCard)
-function toRad(x) {
-  return (x * Math.PI) / 180;
-}
-function haversineNm(a, b) {
-  const R = 6371000;
-  const dLat = toRad(b.lat - a.lat);
-  const dLon = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat),
-    lat2 = toRad(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return (2 * R * Math.asin(Math.sqrt(h))) / 1852;
-}
-function estimateDistanceNm(trip) {
-  if (trip?.route?.length > 1) {
-    let sum = 0;
-    for (let i = 1; i < trip.route.length; i++)
-      sum += haversineNm(trip.route[i - 1], trip.route[i]);
-    return sum;
-  }
-  if (trip?.start?.lat && trip?.end?.lat)
-    return haversineNm(trip.start, trip.end);
-  return 0;
-}
-
 export default function TripsPage() {
   const token = useAuth((s) => s.token);
-  const nav = useNavigate();
+  const navigate = useNavigate();
 
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const [tf, setTf] = useState(TF.ALL);
   const [selYear, setSelYear] = useState(new Date().getFullYear());
 
+  // Load trips
   useEffect(() => {
+    let mounted = true;
     (async () => {
       setLoading(true);
+      setError("");
       try {
         const data = await api("/api/trips", { token });
-        setTrips(data);
-        // initiera valt år till senaste förekomsten
+        if (!mounted) return;
+        setTrips(Array.isArray(data) ? data : []);
+        // Init selected year to latest year present
         const years = Array.from(
           new Set(
-            data.map((t) => new Date(t.date).getFullYear()).filter(Boolean)
+            (Array.isArray(data) ? data : [])
+              .map((t) => (t?.date ? new Date(t.date).getFullYear() : null))
+              .filter(Boolean)
           )
         ).sort((a, b) => a - b);
         if (years.length) setSelYear(years[years.length - 1]);
+      } catch (e) {
+        if (mounted) setError(e?.message || "Kunde inte hämta resor.");
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     })();
+    return () => {
+      mounted = false;
+    };
   }, [token]);
 
+  // Available years (for YEAR filter)
   const yearsAvailable = useMemo(() => {
-    const ys = Array.from(
-      new Set(trips.map((t) => new Date(t.date).getFullYear()).filter(Boolean))
+    return Array.from(
+      new Set(
+        trips
+          .map((t) => (t?.date ? new Date(t.date).getFullYear() : null))
+          .filter(Boolean)
+      )
     ).sort((a, b) => a - b);
-    return ys;
   }, [trips]);
 
+  // Filter by timeframe
   const filtered = useMemo(() => {
     const now = new Date();
-    if (tf === TF.ALL)
-      return trips.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (tf === TF.ALL) return trips.slice();
     if (tf === TF.WEEK) {
       const from = startOfWeek(now);
-      return trips.filter((t) => new Date(t.date) >= from);
+      return trips.filter((t) => t?.date && new Date(t.date) >= from);
     }
     if (tf === TF.MONTH) {
       const from = startOfMonth(now);
-      return trips.filter((t) => new Date(t.date) >= from);
+      return trips.filter((t) => t?.date && new Date(t.date) >= from);
     }
     if (tf === TF.YEAR) {
       const from = startOfYear(new Date(selYear, 0, 1));
       const to = startOfYear(new Date(selYear + 1, 0, 1));
       return trips.filter((t) => {
+        if (!t?.date) return false;
         const d = new Date(t.date);
         return d >= from && d < to;
       });
@@ -130,18 +145,36 @@ export default function TripsPage() {
     return trips;
   }, [trips, tf, selYear]);
 
+  // Sort newest → oldest
+  const sortedFiltered = useMemo(
+    () =>
+      filtered
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b?.date || 0).getTime() - new Date(a?.date || 0).getTime()
+        ),
+    [filtered]
+  );
+
+  // Stats for current filter
   const stats = useMemo(() => {
-    const totalNm = filtered.reduce((acc, t) => acc + estimateDistanceNm(t), 0);
-    const days = countUniqueDays(filtered);
+    const totalNm = sortedFiltered.reduce(
+      (acc, t) => acc + estimateDistanceNm(t),
+      0
+    );
+    const days = countUniqueDays(sortedFiltered);
     return { totalNm: totalNm.toFixed(2), days };
-  }, [filtered]);
+  }, [sortedFiltered]);
 
   return (
     <div className='max-w-3xl mx-auto'>
-      {/* Titel */}
-      <h1 className='text-2xl md:text-3xl font-bold mb-4'>Dina resor</h1>
+      {/* Title + actions */}
+      <div className='flex items-center justify-between mb-4'>
+        <h1 className='text-2xl md:text-3xl font-bold'>Dina resor</h1>
+      </div>
 
-      {/* Segmented filter: V / M / Å / Alla */}
+      {/* Timeframe segmented control */}
       <SegmentedControl
         className='mb-3'
         value={tf}
@@ -154,23 +187,24 @@ export default function TripsPage() {
         ]}
       />
 
-      {/* Årsfilter – visas bara om TF.YEAR och det finns >1 år */}
+      {/* Year filter — only if YEAR and > 1 year present */}
       {tf === TF.YEAR &&
         (yearsAvailable.length > 1 ? (
-          <div className='flex items-center gap-2 mb-4 overflow-x-auto'>
+          <div
+            className='flex items-center gap-2 mb-4 overflow-x-auto'
+            aria-label='Filtrera år'
+          >
             {yearsAvailable.map((y) => (
-              <button
+              <Button
                 key={y}
+                variant={selYear === y ? "secondary" : "ghost"}
+                size='sm'
+                aria-pressed={selYear === y}
                 onClick={() => setSelYear(y)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium border
-                  ${
-                    selYear === y
-                      ? "bg-brand-secondary text-white border-brand-secondary"
-                      : "bg-white text-gray-700 border-brand-border/60 hover:bg-brand-surface-200"
-                  }`}
+                className='rounded-full'
               >
                 {y}
-              </button>
+              </Button>
             ))}
           </div>
         ) : (
@@ -179,47 +213,55 @@ export default function TripsPage() {
           </p>
         ))}
 
-      {/* Sammanställning */}
+      {/* Summary cards */}
       <section className='grid grid-cols-2 gap-3 mb-4'>
-        <div className='bg-white border border-brand-border/40 p-4'>
-          <p className='text-2xl md:text-3xl font-extrabold tracking-tight'>
-            {stats.totalNm} NM
-          </p>
-          <p className='text-xs text-gray-500 mt-1'>Total distans</p>
-        </div>
-        <div className='bg-white border border-brand-border/40 p-4'>
-          <p className='text-2xl md:text-3xl font-extrabold tracking-tight'>
-            {stats.days} DAGAR
-          </p>
-          <p className='text-xs text-gray-400 mt-1'>Dagar ute till havs</p>
-        </div>
+        <Card>
+          <CardContent>
+            <p className='text-2xl md:text-3xl font-extrabold tracking-tight'>
+              {stats.totalNm} NM
+            </p>
+            <p className='text-xs text-gray-500 mt-1'>Total distans</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent>
+            <p className='text-2xl md:text-3xl font-extrabold tracking-tight'>
+              {stats.days} DAGAR
+            </p>
+            <p className='text-xs text-gray-400 mt-1'>Dagar ute till havs</p>
+          </CardContent>
+        </Card>
       </section>
 
       <h2 className='text-xl font-semibold mb-2'>Loggade resor</h2>
 
-      {/* Lista */}
+      {/* List states */}
       {loading ? (
-        <div className='bg-white rounded-xl border p-6'>Laddar…</div>
-      ) : filtered.length === 0 ? (
-        <div className='bg-white rounded-xl border p-6'>
-          Inga resor i vald period.
-        </div>
+        <Card>
+          <CardContent>Laddar…</CardContent>
+        </Card>
+      ) : error ? (
+        <Card>
+          <CardContent className='text-red-600'>
+            Kunde inte hämta resor: {error}
+          </CardContent>
+        </Card>
+      ) : sortedFiltered.length === 0 ? (
+        <Card>
+          <CardContent className='flex items-center justify-between gap-3'>
+            <div>Inga resor i vald period.</div>
+            <Button size='sm' onClick={() => navigate("/trips/new")}>
+              Skapa första resan
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <ul className='grid gap-3'>
-          {filtered
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .map((t) => (
-              <li key={t._id}>
-                <TripCard
-                  trip={t}
-                  onClick={() =>
-                    /** gå till detaljer */ window.location.assign(
-                      `/trips/${t._id}`
-                    )
-                  }
-                />
-              </li>
-            ))}
+          {sortedFiltered.map((t) => (
+            <li key={t._id}>
+              <TripCard trip={t} onClick={() => navigate(`/trips/${t._id}`)} />
+            </li>
+          ))}
         </ul>
       )}
     </div>

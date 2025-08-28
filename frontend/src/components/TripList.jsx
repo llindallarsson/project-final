@@ -1,34 +1,46 @@
-// src/components/TripList.jsx
-export default function TripList({ trips }) {
-  if (!trips || trips.length === 0) {
-    return <p>Inga resor hittades.</p>;
+import TripCard from "./TripCard";
+
+/**
+ * TripList
+ * Renders a list of trips using the shared TripCard component.
+ *
+ * Props:
+ * - trips: Array<Trip> — list of trip objects
+ * - onTripClick?: (trip) => void — optional handler when a card is clicked
+ * - className?: string — optional extra classes for the <ul>
+ */
+export default function TripList({ trips = [], onTripClick, className = "" }) {
+  // Empty state (consistent with app styling)
+  if (!Array.isArray(trips) || trips.length === 0) {
+    return (
+      <div className='bg-white border border-brand-border/40 p-6 rounded'>
+        Inga resor hittades.
+      </div>
+    );
   }
 
+  // Default navigation if no custom click handler is provided
+  const handleClick =
+    onTripClick ||
+    ((t) => {
+      const id = t._id || t.id;
+      if (id) window.location.assign(`/trips/${id}`);
+    });
+
+  // Sort newest → oldest; fall back to startTime when date is missing
+  const sorted = trips
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b.date || b.startTime || 0) -
+        new Date(a.date || a.startTime || 0)
+    );
+
   return (
-    <ul style={{ listStyle: "none", padding: 0 }}>
-      {trips.map((trip) => (
-        <li
-          key={trip.id || trip._id}
-          style={{
-            marginBottom: "1rem",
-            padding: "0.75rem",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            background: "#f9f9f9",
-          }}
-        >
-          <strong>{trip.start}</strong> → <strong>{trip.end}</strong>
-          <br />
-          <small>
-            {trip.startTime
-              ? new Date(trip.startTime).toLocaleString()
-              : "Okänt startdatum"}{" "}
-            –{" "}
-            {trip.endTime
-              ? new Date(trip.endTime).toLocaleString()
-              : "Okänt slutdatum"}
-          </small>
-          {trip.notes && <p style={{ marginTop: "0.5rem" }}>📝 {trip.notes}</p>}
+    <ul className={`grid gap-3 ${className}`}>
+      {sorted.map((t) => (
+        <li key={t._id || t.id}>
+          <TripCard trip={t} onClick={() => handleClick(t)} />
         </li>
       ))}
     </ul>
