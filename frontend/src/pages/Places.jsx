@@ -128,31 +128,31 @@ export default function Places() {
 
   // ---- Render ----
   return (
-    <div className='lg:grid lg:grid-cols-[minmax(360px,1fr)_460px] xl:grid-cols-[minmax(380px,1fr)_520px] lg:items-start gap-6'>
+    <div className="lg:grid lg:grid-cols-[minmax(360px,1fr)_460px] xl:grid-cols-[minmax(380px,1fr)_520px] lg:items-start gap-6">
       {/* LEFT: list + create form */}
-      <div className='min-w-0'>
-        <div className='flex items-center justify-between mb-4'>
-          <h1 className='text-2xl md:text-3xl font-bold'>Dina platser</h1>
+      <div className="min-w-0">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl md:text-3xl font-bold">Dina platser</h1>
         </div>
 
         {error && (
-          <Card className='mb-4'>
-            <CardContent className='text-red-600'>{error}</CardContent>
+          <Card className="mb-4">
+            <CardContent className="text-red-600">{error}</CardContent>
           </Card>
         )}
 
         {/* List */}
         <Card>
           <CardHeader>
-            <h2 className='text-lg font-semibold'>Sparade platser</h2>
+            <h2 className="text-lg font-semibold">Sparade platser</h2>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className='text-sm text-gray-600'>Laddar…</p>
+              <p className="text-sm text-gray-600">Laddar…</p>
             ) : places.length === 0 ? (
-              <p className='text-sm text-gray-600'>Inga platser ännu.</p>
+              <p className="text-sm text-gray-600">Inga platser ännu.</p>
             ) : (
-              <ul className='grid gap-2'>
+              <ul className="grid gap-2">
                 {places.map((p) => {
                   const isActive = activePlaceId === p._id;
                   const lat = p.location?.lat;
@@ -166,26 +166,26 @@ export default function Places() {
                           : "bg-white"
                       }`}
                     >
-                      <div className='min-w-0'>
-                        <div className='font-medium truncate'>
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">
                           {p.name || "—"}
                         </div>
-                        <div className='text-xs text-gray-600'>
+                        <div className="text-xs text-gray-600">
                           {Number.isFinite(lat) && Number.isFinite(lng)
                             ? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
                             : "—"}
                         </div>
                         {p.notes && (
-                          <div className='mt-1 text-sm text-gray-800 whitespace-pre-wrap'>
+                          <div className="mt-1 text-sm text-gray-800 whitespace-pre-wrap">
                             {p.notes}
                           </div>
                         )}
                       </div>
-                      <div className='shrink-0 flex items-center gap-2'>
+                      <div className="shrink-0 flex items-center gap-2">
                         {Number.isFinite(lat) && Number.isFinite(lng) && (
                           <Button
-                            variant='ghost'
-                            size='sm'
+                            variant="ghost"
+                            size="sm"
                             onClick={() => {
                               setActivePlaceId(p._id);
                               setDraft((d) => ({
@@ -194,14 +194,14 @@ export default function Places() {
                                 lng,
                               }));
                             }}
-                            title='Visa på kartan'
+                            title="Visa på kartan"
                           >
                             Visa
                           </Button>
                         )}
                         <Button
-                          variant='danger'
-                          size='sm'
+                          variant="danger"
+                          size="sm"
                           onClick={() => deletePlace(p._id)}
                         >
                           Ta bort
@@ -216,69 +216,69 @@ export default function Places() {
         </Card>
 
         {/* Create form */}
-        <Card className='mt-4'>
+        <Card className="mt-4">
           <CardHeader>
-            <h2 className='text-lg font-semibold'>Lägg till plats</h2>
+            <h2 className="text-lg font-semibold">Lägg till plats</h2>
           </CardHeader>
           <CardContent>
-            <form onSubmit={createPlace} className='grid gap-3' noValidate>
-              <div className='grid gap-2'>
-                <label htmlFor='name' className='font-medium'>
+            <form onSubmit={createPlace} className="grid gap-3" noValidate>
+              <div className="grid gap-2">
+                <label htmlFor="name" className="font-medium">
                   Namn
                 </label>
                 <input
-                  id='name'
-                  className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30 rounded-lg'
-                  placeholder='T.ex. Hemmahamn'
+                  id="name"
+                  className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30 rounded-lg"
+                  placeholder="T.ex. Hemmahamn"
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   required
                 />
               </div>
 
-              <div className='grid grid-cols-2 gap-3'>
-                <div className='grid gap-2'>
-                  <label htmlFor='lat' className='font-medium'>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <label htmlFor="lat" className="font-medium">
                     Latitud
                   </label>
                   <input
-                    id='lat'
-                    className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30 rounded-lg'
-                    placeholder='59.325000'
+                    id="lat"
+                    className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30 rounded-lg"
+                    placeholder="59.325000"
                     value={draft.lat}
                     onChange={(e) =>
                       setDraft({ ...draft, lat: e.target.value })
                     }
-                    inputMode='decimal'
+                    inputMode="decimal"
                   />
                 </div>
-                <div className='grid gap-2'>
-                  <label htmlFor='lng' className='font-medium'>
+                <div className="grid gap-2">
+                  <label htmlFor="lng" className="font-medium">
                     Longitud
                   </label>
                   <input
-                    id='lng'
-                    className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30 rounded-lg'
-                    placeholder='18.070000'
+                    id="lng"
+                    className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30 rounded-lg"
+                    placeholder="18.070000"
                     value={draft.lng}
                     onChange={(e) =>
                       setDraft({ ...draft, lng: e.target.value })
                     }
-                    inputMode='decimal'
+                    inputMode="decimal"
                   />
                 </div>
               </div>
 
-              <div className='grid gap-2'>
-                <label htmlFor='notes' className='font-medium'>
+              <div className="grid gap-2">
+                <label htmlFor="notes" className="font-medium">
                   Anteckningar{" "}
-                  <span className='text-gray-500 font-normal'>(valfritt)</span>
+                  <span className="text-gray-500 font-normal">(valfritt)</span>
                 </label>
                 <textarea
-                  id='notes'
+                  id="notes"
                   rows={3}
-                  className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30 rounded-lg'
-                  placeholder='Kort beskrivning, förtöjningsinfo, etc.'
+                  className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30 rounded-lg"
+                  placeholder="Kort beskrivning, förtöjningsinfo, etc."
                   value={draft.notes}
                   onChange={(e) =>
                     setDraft({ ...draft, notes: e.target.value })
@@ -286,21 +286,17 @@ export default function Places() {
                 />
               </div>
 
-              <p className='text-xs text-gray-600'>
-                Tips: Klicka i kartan för att fylla Lat/Lng automatiskt.
-              </p>
-
-              <div className='flex items-center justify-end gap-2'>
+              <div className="flex items-center justify-end gap-2">
                 <Button
-                  type='button'
-                  variant='ghost'
+                  type="button"
+                  variant="ghost"
                   onClick={() =>
                     setDraft({ name: "", lat: 59.325, lng: 18.07, notes: "" })
                   }
                 >
                   Rensa
                 </Button>
-                <Button type='submit'>Lägg till plats</Button>
+                <Button type="submit">Lägg till plats</Button>
               </div>
             </form>
           </CardContent>
@@ -308,17 +304,17 @@ export default function Places() {
       </div>
 
       {/* RIGHT: sticky map on desktop, Card-wrapped; full width on mobile below */}
-      <aside className='hidden lg:block sticky top-20 min-w-0 h-[calc(100vh-140px)] overflow-hidden'>
-        <Card className='h-full'>
-          <CardContent className='p-0 h-full'>
+      <aside className="hidden lg:block sticky top-20 min-w-0 h-[calc(100vh-140px)] overflow-hidden">
+        <Card className="h-full">
+          <CardContent className="p-0 h-full">
             <MapContainer
               center={[center.lat, center.lng]}
               zoom={9}
               style={{ height: "100%", width: "100%" }}
             >
               <TileLayer
-                attribution='&copy; OpenStreetMap contributors'
-                url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                attribution="&copy; OpenStreetMap contributors"
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
 
               {/* All saved places */}
@@ -357,17 +353,17 @@ export default function Places() {
       </aside>
 
       {/* Mobile map (full width) */}
-      <div className='lg:hidden mt-4'>
+      <div className="lg:hidden mt-4">
         <Card>
-          <CardContent className='p-0' style={{ height: 380 }}>
+          <CardContent className="p-0" style={{ height: 380 }}>
             <MapContainer
               center={[center.lat, center.lng]}
               zoom={9}
               style={{ height: "100%", width: "100%" }}
             >
               <TileLayer
-                attribution='&copy; OpenStreetMap contributors'
-                url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                attribution="&copy; OpenStreetMap contributors"
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               {places.map((p) => {
                 const lat = p.location?.lat;
