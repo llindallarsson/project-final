@@ -108,13 +108,13 @@ export default function LiveTrip() {
   }
 
   return (
-    <div className='max-w-3xl mx-auto'>
+    <div className="max-w-3xl mx-auto">
       {/* Title */}
-      <h1 className='text-2xl md:text-3xl font-bold mb-4'>Live-resa</h1>
+      <h1 className="text-2xl md:text-3xl font-bold mb-4">Live-resa</h1>
 
       {/* Status + meta */}
-      <div className='bg-white border p-4 md:p-6'>
-        <div className='flex flex-wrap items-center gap-3 mb-3'>
+      <div className="bg-white border p-4 md:p-6">
+        <div className="flex flex-wrap items-center gap-3 mb-3">
           <span
             className={`px-2 py-1 text-sm rounded border ${
               isTracking
@@ -125,23 +125,23 @@ export default function LiveTrip() {
             {isTracking ? "Pågår…" : "Stoppad"}
           </span>
 
-          <span className='text-sm text-gray-700'>
+          <span className="text-sm text-gray-700">
             Tid: <strong>{fmt(elapsedMs)}</strong>
           </span>
 
           {startedAt && (
-            <span className='text-xs text-gray-500'>
+            <span className="text-xs text-gray-500">
               Startad: {new Date(startedAt).toLocaleTimeString("sv-SE")}
             </span>
           )}
 
-          {error && <span className='text-sm text-red-600'>{error}</span>}
+          {error && <span className="text-sm text-red-600">{error}</span>}
         </div>
 
         {/* Map */}
-        <div className='mb-4'>
+        <div className="mb-4">
           <TripMap
-            mode='view'
+            mode="view"
             route={points}
             start={startPoint}
             end={endPoint}
@@ -150,7 +150,7 @@ export default function LiveTrip() {
         </div>
 
         {/* Controls */}
-        <div className='flex flex-wrap gap-2'>
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={handleStart}
             disabled={!canStart}
@@ -173,11 +173,6 @@ export default function LiveTrip() {
             {saving || isStopping ? "Sparar…" : "Stoppa & spara"}
           </button>
         </div>
-
-        <p className='text-xs text-gray-600 mt-3'>
-          Tips: Tillåt plats i webbläsaren. På iOS/Safari fungerar det bäst när
-          skärmen är på.
-        </p>
       </div>
     </div>
   );
