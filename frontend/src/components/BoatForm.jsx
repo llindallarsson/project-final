@@ -97,144 +97,141 @@ export default function BoatForm({
     <form
       onSubmit={onSubmit}
       noValidate
-      className='grid gap-4 bg-white border p-4 md:p-6'
+      className="grid gap-4 bg-white border p-4 md:p-6"
     >
       {/* Error banner */}
       {err && (
         <div
-          role='alert'
-          className='border border-red-300 bg-red-50 text-red-700 p-3 rounded'
+          role="alert"
+          className="border border-red-300 bg-red-50 text-red-700 p-3 rounded"
         >
           {err}
         </div>
       )}
 
       {/* Name */}
-      <div className='grid gap-2'>
-        <label className='font-medium' htmlFor='boat-name'>
+      <div className="grid gap-2">
+        <label className="font-medium" htmlFor="boat-name">
           Namn
         </label>
         <input
-          id='boat-name'
-          className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
+          id="boat-name"
+          className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
           aria-invalid={!!err && !name.trim()}
-          autoComplete='off'
+          autoComplete="off"
         />
       </div>
 
       {/* Model & Length */}
-      <div className='grid md:grid-cols-2 gap-4'>
-        <div className='grid gap-2'>
-          <label className='font-medium' htmlFor='boat-model'>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid gap-2">
+          <label className="font-medium" htmlFor="boat-model">
             Modell
           </label>
           <input
-            id='boat-model'
-            className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
+            id="boat-model"
+            className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            placeholder='Albin Cirus 78'
-            autoComplete='off'
+            placeholder="Albin Cirus 78"
+            autoComplete="off"
           />
         </div>
 
-        <div className='grid gap-2'>
-          <label className='font-medium' htmlFor='boat-length'>
+        <div className="grid gap-2">
+          <label className="font-medium" htmlFor="boat-length">
             Längd (m)
           </label>
           <input
-            id='boat-length'
-            type='number'
-            min='0'
-            step='0.01'
-            inputMode='decimal'
-            className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
+            id="boat-length"
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
             value={lengthM}
             onChange={(e) => setLengthM(e.target.value)}
-            placeholder='t.ex. 7.8'
+            placeholder="t.ex. 7.8"
           />
         </div>
       </div>
 
       {/* Draft & Engine */}
-      <div className='grid md:grid-cols-2 gap-4'>
-        <div className='grid gap-2'>
-          <label className='font-medium' htmlFor='boat-draft'>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid gap-2">
+          <label className="font-medium" htmlFor="boat-draft">
             Djupgående (m)
           </label>
           <input
-            id='boat-draft'
-            type='number'
-            min='0'
-            step='0.01'
-            inputMode='decimal'
-            className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
+            id="boat-draft"
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
             value={draftM}
             onChange={(e) => setDraftM(e.target.value)}
-            placeholder='t.ex. 1.49'
+            placeholder="t.ex. 1.49"
           />
         </div>
 
-        <div className='grid gap-2'>
-          <label className='font-medium' htmlFor='boat-engine'>
+        <div className="grid gap-2">
+          <label className="font-medium" htmlFor="boat-engine">
             Motor
           </label>
           <input
-            id='boat-engine'
-            className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
+            id="boat-engine"
+            className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
             value={engine}
             onChange={(e) => setEngine(e.target.value)}
-            placeholder='Volvo Penta MD5'
-            autoComplete='off'
+            placeholder="Volvo Penta MD5"
+            autoComplete="off"
           />
         </div>
       </div>
 
       {/* Notes */}
-      <div className='grid gap-2'>
-        <label className='font-medium' htmlFor='boat-notes'>
+      <div className="grid gap-2">
+        <label className="font-medium" htmlFor="boat-notes">
           Övrigt
         </label>
         <textarea
-          id='boat-notes'
+          id="boat-notes"
           rows={4}
-          className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
+          className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder='Anteckningar om båten...'
+          placeholder="Anteckningar om båten..."
         />
       </div>
 
       {/* Photo */}
-      <div className='grid gap-2'>
-        <label className='font-medium' htmlFor='boat-photo'>
+      <div className="grid gap-2">
+        <label className="font-medium" htmlFor="boat-photo">
           Bild (valfritt)
         </label>
         <input
-          id='boat-photo'
-          type='file'
-          accept='image/*'
+          id="boat-photo"
+          type="file"
+          accept="image/*"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
         />
         {file && (
-          <p className='text-xs text-gray-600'>
-            Vald fil: <span className='font-medium'>{file.name}</span>
+          <p className="text-xs text-gray-600">
+            Vald fil: <span className="font-medium">{file.name}</span>
           </p>
         )}
-        <p className='text-xs text-gray-500'>
-          Max {maxPhotoSizeMB} MB. JPEG/PNG/HEIC beroende på webbläsarstöd.
-        </p>
       </div>
 
       {/* Actions */}
-      <div className='flex items-center justify-end gap-2'>
+      <div className="flex items-center justify-end gap-2">
         {onCancel && (
           <button
-            type='button'
-            className='px-4 py-2 border rounded'
+            type="button"
+            className="px-4 py-2 border rounded"
             onClick={onCancel}
           >
             Avbryt
@@ -242,7 +239,7 @@ export default function BoatForm({
         )}
         <button
           disabled={saving}
-          className='px-4 py-2 bg-brand-primary text-white rounded disabled:opacity-60'
+          className="px-4 py-2 bg-brand-primary text-white rounded disabled:opacity-60"
         >
           {saving ? "Sparar…" : mode === "edit" ? "Uppdatera" : "Lägg till båt"}
         </button>
