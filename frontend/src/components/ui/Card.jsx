@@ -1,141 +1,140 @@
-import { forwardRef } from "react";
+import { cva } from 'class-variance-authority';
+import { forwardRef } from 'react';
 
-/** Small util to join class names safely */
-function cx(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
+import { cn } from '../../lib/cn';
 
-/**
- * Card
- * - Backward compatible: <Card><CardHeader/><CardContent/></Card> still works.
- * - New props:
- *    - as: element tag (default "section")
- *    - bordered: boolean (default true)
- *    - shadow: boolean (default true)
- *    - variant: "elevated" | "flat" (default "elevated")
- */
+export const cardStyles = cva('bg-white text-gray-900 rounded-xl', {
+  variants: {
+    variant: {
+      elevated: 'border border-brand-border/30 shadow-soft',
+      outline: 'border border-brand-border/40 shadow-none',
+      flat: 'border border-transparent shadow-none',
+      ghost: 'border border-brand-border/20 bg-white/60 backdrop-blur shadow-none',
+    },
+    padding: {
+      none: '',
+      sm: 'p-3',
+      md: 'p-4',
+      lg: 'p-6',
+    },
+    radius: {
+      md: 'rounded-lg',
+      lg: 'rounded-xl',
+      xl: 'rounded-2xl',
+    },
+    interactive: {
+      true: 'transition hover:shadow-lg hover:border-brand-border/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary',
+      false: '',
+    },
+  },
+  defaultVariants: {
+    variant: 'elevated',
+    padding: 'md',
+    radius: 'xl',
+    interactive: false,
+  },
+});
+
 export const Card = forwardRef(function Card(
   {
-    as: Tag = "section",
-    bordered = true,
-    shadow = true,
-    variant = "elevated",
-    className = "",
+    as: Tag = 'section',
+    variant = 'elevated',
+    padding = 'md',
+    radius = 'xl',
+    interactive = false,
+    bordered = true, // BC: sätt false för att ta bort border
+    shadow = undefined, // BC: om false → shadow-none
+    className,
     children,
     ...rest
   },
   ref
 ) {
+  const classes = cn(
+    cardStyles({ variant, padding, radius, interactive }),
+    bordered === false && 'border-0',
+    shadow === false && 'shadow-none',
+    className
+  );
+
   return (
-    <Tag
-      ref={ref}
-      className={cx(
-        "bg-white rounded-2xl",
-        bordered && "border border-brand-border/30",
-        shadow && (variant === "elevated" ? "shadow-soft" : "shadow-none"),
-        // keep compatibility with any existing shadow utility in your CSS
-        "shadow-card",
-        className
-      )}
-      {...rest}
-    >
+    <Tag ref={ref} className={classes} {...rest}>
       {children}
     </Tag>
   );
 });
 
-/**
- * CardHeader
- * - Backward compatible: children rendering remains unchanged.
- * - New props:
- *    - title / subtitle: quick way to render a standard header
- *    - actions: right-side node (e.g. buttons)
- *    - divider: boolean (default true)
- *    - padding: "sm" | "md" | "lg" (default "md")
- *    - as: element tag (default "div")
- */
+// --- Subkomponenter -------------------------------------------------------
+
+const headerStyles = cva('', {
+  variants: {
+    padding: { sm: 'p-3', md: 'p-4', lg: 'p-6' },
+    divider: { true: 'border-b border-brand-border/30', false: '' },
+  },
+  defaultVariants: { padding: 'md', divider: true },
+});
+
 export function CardHeader({
-  as: Tag = "div",
+  as: Tag = 'div',
   title,
   subtitle,
   actions,
   divider = true,
-  padding = "md",
-  className = "",
+  padding = 'md',
+  className,
   children,
 }) {
-  const pad =
-    padding === "sm" ? "p-3" : padding === "lg" ? "p-6" : /* md */ "p-4";
+  const classes = cn(headerStyles({ padding, divider }), className);
 
   return (
-    <Tag
-      className={cx(
-        pad,
-        divider && "border-b border-brand-border/30",
-        className
-      )}
-    >
+    <Tag className={classes}>
       {children ? (
         children
       ) : (
-        <div className='flex items-start justify-between gap-3'>
+        <div className="flex items-start justify-between gap-3">
           <div>
-            {title && (
-              <h3 className='text-lg font-semibold leading-tight'>{title}</h3>
-            )}
-            {subtitle && (
-              <p className='text-sm text-gray-600 mt-0.5'>{subtitle}</p>
-            )}
+            {title && <h3 className="text-lg font-semibold leading-tight">{title}</h3>}
+            {subtitle && <p className="text-sm text-gray-600 mt-0.5">{subtitle}</p>}
           </div>
-          {actions && <div className='shrink-0'>{actions}</div>}
+          {actions && <div className="shrink-0">{actions}</div>}
         </div>
       )}
     </Tag>
   );
 }
 
-/**
- * CardContent
- * - Backward compatible.
- * - New props:
- *    - padding: "sm" | "md" | "lg" (default "md")
- *    - as: element tag (default "div")
- */
-export function CardContent({
-  as: Tag = "div",
-  padding = "md",
-  className = "",
-  children,
-}) {
-  const pad =
-    padding === "sm" ? "p-3" : padding === "lg" ? "p-6" : /* md */ "p-4";
+const contentStyles = cva('', {
+  variants: { padding: { sm: 'p-3', md: 'p-4', lg: 'p-6' } },
+  defaultVariants: { padding: 'md' },
+});
 
-  return <Tag className={cx(pad, className)}>{children}</Tag>;
+export function CardContent({ as: Tag = 'div', padding = 'md', className, children }) {
+  return <Tag className={cn(contentStyles({ padding }), className)}>{children}</Tag>;
 }
 
-/**
- * CardFooter (new)
- * - Optional footer with a top divider.
- * - API mirrors CardHeader for consistency.
- */
+const footerStyles = cva('', {
+  variants: {
+    padding: { sm: 'p-3', md: 'p-4', lg: 'p-6' },
+    divider: { true: 'border-t border-brand-border/30', false: '' },
+  },
+  defaultVariants: { padding: 'md', divider: true },
+});
+
 export function CardFooter({
-  as: Tag = "div",
-  padding = "md",
+  as: Tag = 'div',
+  padding = 'md',
   divider = true,
-  className = "",
+  className,
   children,
 }) {
-  const pad =
-    padding === "sm" ? "p-3" : padding === "lg" ? "p-6" : /* md */ "p-4";
-  return (
-    <Tag
-      className={cx(
-        pad,
-        divider && "border-t border-brand-border/30",
-        className
-      )}
-    >
-      {children}
-    </Tag>
-  );
+  return <Tag className={cn(footerStyles({ padding, divider }), className)}>{children}</Tag>;
+}
+
+// (Valfritt) Små hjälpare för semantiska element
+export function CardTitle({ className, ...props }) {
+  return <h3 className={cn('text-base font-semibold leading-6', className)} {...props} />;
+}
+
+export function CardDescription({ className, ...props }) {
+  return <p className={cn('text-sm text-gray-600', className)} {...props} />;
 }

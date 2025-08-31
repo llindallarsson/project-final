@@ -1,6 +1,6 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
 function signToken(user) {
   return jwt.sign({ sub: user._id }, process.env.JWT_SECRET, {
@@ -115,11 +115,4 @@ async function deleteMe(req, res, next) {
   }
 }
 
-module.exports = {
-  signup,
-  login,
-  getMe,
-  updateEmail,
-  updatePassword,
-  deleteMe,
-};
+export default { signup, login, getMe, updateEmail, updatePassword, deleteMe };

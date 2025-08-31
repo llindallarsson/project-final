@@ -1,4 +1,3 @@
-// src/main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import {
@@ -31,7 +30,7 @@ import AddBoat from "./pages/AddBoat";
  */
 const Protected = ({ children }) => {
   const token = useAuth((s) => s.token);
-  return token ? children : <Navigate to='/login' replace />;
+  return token ? children : <Navigate to="/login" replace />;
 };
 
 // App routes
@@ -65,7 +64,7 @@ const router = createBrowserRouter([
   },
 
   // Fallback: if nothing matches, send to login (common in auth’d apps)
-  { path: "*", element: <Navigate to='/login' replace /> },
+  { path: "*", element: <Navigate to="/login" replace /> },
 ]);
 
 /**
@@ -92,7 +91,7 @@ root.render(
     <RouterProvider
       router={router}
       future={{ v7_startTransition: true }}
-      fallbackElement={<div className='p-4 text-gray-600'>Loading…</div>}
+      fallbackElement={<div className="p-4 text-gray-600">Loading…</div>}
     />
   </React.StrictMode>
 );

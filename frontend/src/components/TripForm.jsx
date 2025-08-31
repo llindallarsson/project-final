@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { api } from "../api";
-import { useAuth } from "../store/auth";
-import TripMap from "./TripMap";
-import PhotoPicker from "./PhotoPicker";
-import { Sun, CloudSun, Cloud, CloudRain, CloudLightning } from "lucide-react";
+import { Cloud, CloudLightning, CloudRain, CloudSun, Sun } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+import { api } from '../api';
+import { useAuth } from '../store/auth';
+import PhotoPicker from './PhotoPicker';
+import TripMap from './TripMap';
+import Button from './ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
+import Input from './ui/Input';
 
 /* --------------------------------------------
  * Reverse geocoding (OSM / Nominatim) + simple cache
@@ -17,12 +21,7 @@ async function reverseGeocodeLatLng(lat, lng) {
 
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=sv&zoom=14`;
-    const res = await fetch(url, {
-      headers: {
-        // Keep headers explicit; browser will send Referer automatically
-        Accept: "application/json",
-      },
-    });
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const nice =
@@ -34,7 +33,7 @@ async function reverseGeocodeLatLng(lat, lng) {
       data?.address?.village ||
       data?.address?.town ||
       data?.address?.city ||
-      (data?.display_name ? String(data.display_name).split(",")[0] : null);
+      (data?.display_name ? String(data.display_name).split(',')[0] : null);
 
     const label = nice || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
     _geoCache.set(key, label);
@@ -47,24 +46,21 @@ async function reverseGeocodeLatLng(lat, lng) {
 }
 
 /* --------------------------------------------
- * Weather presets for quick selection
+ * Weather presets
  * -------------------------------------------- */
 const WEATHER_OPTS = [
-  { key: "sunny", label: "Sol", Icon: Sun },
-  { key: "partly", label: "Sol + moln", Icon: CloudSun },
-  { key: "cloudy", label: "Molnigt", Icon: Cloud },
-  { key: "rain", label: "Regn", Icon: CloudRain },
-  { key: "storm", label: "Åska", Icon: CloudLightning },
+  { key: 'sunny', label: 'Sol', Icon: Sun },
+  { key: 'partly', label: 'Sol + moln', Icon: CloudSun },
+  { key: 'cloudy', label: 'Molnigt', Icon: Cloud },
+  { key: 'rain', label: 'Regn', Icon: CloudRain },
+  { key: 'storm', label: 'Åska', Icon: CloudLightning },
 ];
 
 /* --------------------------------------------
  * Helpers
  * -------------------------------------------- */
-const DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-
-function toRad(x) {
-  return (x * Math.PI) / 180;
-}
+const DIRS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+const toRad = (x) => (x * Math.PI) / 180;
 
 // Haversine in nautical miles
 function haversineNm(a, b) {
@@ -74,29 +70,24 @@ function haversineNm(a, b) {
   const dLng = toRad(b.lng - a.lng);
   const lat1 = toRad(a.lat);
   const lat2 = toRad(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
   const d_km = 2 * R_km * Math.asin(Math.sqrt(h));
   return d_km / 1.852; // km → NM
 }
 
-// Total route length in NM (polyline preferred; fallback to start↔end)
 function calcRouteNm(route, start, end) {
   if (Array.isArray(route) && route.length > 1) {
     let sum = 0;
-    for (let i = 1; i < route.length; i++)
-      sum += haversineNm(route[i - 1], route[i]);
+    for (let i = 1; i < route.length; i++) sum += haversineNm(route[i - 1], route[i]);
     return sum;
   }
   if (start && end) return haversineNm(start, end);
   return 0;
 }
 
-// Safe number parsing (accepts empty string)
 function numOrEmpty(v) {
   const n = Number(v);
-  return Number.isNaN(n) ? "" : n;
+  return Number.isNaN(n) ? '' : n;
 }
 
 /* --------------------------------------------
@@ -122,7 +113,7 @@ function PlaceAutocomplete({
 
   const commonInputProps = {
     className:
-      "h-11 border px-3 py-2 w-full outline-none focus:ring-2 focus:ring-brand-primary/30",
+      'h-11 border px-3 py-2 w-full rounded-lg outline-none focus:ring-2 focus:ring-brand-primary/30',
     placeholder,
     value,
     onChange: (e) => {
@@ -137,13 +128,13 @@ function PlaceAutocomplete({
   };
 
   return (
-    <div className='relative'>
+    <div className="relative">
       {noIcon ? (
         <input {...commonInputProps} />
       ) : (
-        <div className='grid grid-cols-[24px_1fr] items-center gap-2'>
+        <div className="grid grid-cols-[24px_1fr] items-center gap-2">
           <span
-            className='inline-flex items-center justify-center h-5 w-5 pointer-events-none select-none'
+            className="inline-flex h-5 w-5 select-none items-center justify-center pointer-events-none"
             aria-hidden
           >
             {leading}
@@ -154,23 +145,23 @@ function PlaceAutocomplete({
 
       {open && items.length > 0 && (
         <div
-          className={`absolute z-20 right-0 mt-1 border bg-white shadow ${
-            noIcon ? "left-0" : "left-[24px]"
+          className={`absolute right-0 z-20 mt-1 rounded-lg border bg-white shadow ${
+            noIcon ? 'left-0' : 'left-[24px]'
           }`}
         >
           {items.map((p) => (
             <button
-              type='button'
+              type="button"
               key={p._id}
-              className='w-full text-left px-3 py-2 hover:bg-brand-surface-200'
+              className="w-full px-3 py-2 text-left hover:bg-brand-surface-200 text-sm"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onPick(p)}
             >
-              {p.name}
+              <div className="truncate">{p.name}</div>
               {p.location?.lat && p.location?.lng && (
-                <span className='ml-2 text-xs text-gray-500'>
+                <div className="text-xs text-gray-500 truncate">
                   ({p.location.lat.toFixed(3)}, {p.location.lng.toFixed(3)})
-                </span>
+                </div>
               )}
             </button>
           ))}
@@ -183,47 +174,43 @@ function PlaceAutocomplete({
 /* --------------------------------------------
  * TripForm
  * -------------------------------------------- */
-export default function TripForm({ initialTrip = null, mode = "create" }) {
+export default function TripForm({ initialTrip = null, mode = 'create' }) {
   const token = useAuth((s) => s.token);
   const nav = useNavigate();
 
   // Base fields
-  const [title, setTitle] = useState(initialTrip?.title || "");
+  const [title, setTitle] = useState(initialTrip?.title || '');
   const [date, setDate] = useState(
-    initialTrip?.date
-      ? new Date(initialTrip.date).toISOString().slice(0, 10)
-      : ""
+    initialTrip?.date ? new Date(initialTrip.date).toISOString().slice(0, 10) : ''
   );
   const [hours, setHours] = useState(
-    initialTrip?.durationMinutes
-      ? Math.floor(initialTrip.durationMinutes / 60)
-      : ""
+    initialTrip?.durationMinutes ? Math.floor(initialTrip.durationMinutes / 60) : ''
   );
   const [mins, setMins] = useState(
-    initialTrip?.durationMinutes ? initialTrip.durationMinutes % 60 : ""
+    initialTrip?.durationMinutes ? initialTrip.durationMinutes % 60 : ''
   );
 
   // Wind (m/s)
-  const [windDir, setWindDir] = useState(initialTrip?.wind?.dir || "");
+  const [windDir, setWindDir] = useState(initialTrip?.wind?.dir || '');
   const [windMs, setWindMs] = useState(
-    initialTrip?.wind?.speedMs != null ? String(initialTrip.wind.speedMs) : ""
+    initialTrip?.wind?.speedMs != null ? String(initialTrip.wind.speedMs) : ''
   );
 
   // Weather & Boat
-  const [weather, setWeather] = useState(initialTrip?.weather || "");
+  const [weather, setWeather] = useState(initialTrip?.weather || '');
   const [boats, setBoats] = useState([]);
-  const [boatId, setBoatId] = useState(initialTrip?.boatId || "");
+  const [boatId, setBoatId] = useState(initialTrip?.boatId || '');
 
   // Crew & notes
   const [crewCsv, setCrewCsv] = useState(
-    Array.isArray(initialTrip?.crew) ? initialTrip.crew.join(", ") : ""
+    Array.isArray(initialTrip?.crew) ? initialTrip.crew.join(', ') : ''
   );
-  const [notes, setNotes] = useState(initialTrip?.notes || "");
+  const [notes, setNotes] = useState(initialTrip?.notes || '');
 
   // Places & inputs
   const [places, setPlaces] = useState([]);
-  const [startName, setStartName] = useState(initialTrip?.start?.name || "");
-  const [endName, setEndName] = useState(initialTrip?.end?.name || "");
+  const [startName, setStartName] = useState(initialTrip?.start?.name || '');
+  const [endName, setEndName] = useState(initialTrip?.end?.name || '');
 
   // Map & route
   const [start, setStart] = useState(initialTrip?.start || null);
@@ -232,33 +219,33 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
   const [endAuto, setEndAuto] = useState(false); // set by route drawing
   const [route, setRoute] = useState(initialTrip?.route || []);
   const [pickerEnabled, setPickerEnabled] = useState(false);
-  const [pickerTarget, setPickerTarget] = useState("start"); // 'start' | 'end' | 'route'
+  const [pickerTarget, setPickerTarget] = useState('start'); // 'start' | 'end' | 'route'
 
   const derivedMapMode = !pickerEnabled
-    ? "view"
-    : pickerTarget === "start"
-    ? "set-start"
-    : pickerTarget === "end"
-    ? "set-end"
-    : "draw";
+    ? 'view'
+    : pickerTarget === 'start'
+    ? 'set-start'
+    : pickerTarget === 'end'
+    ? 'set-end'
+    : 'draw';
 
   // Distance (NM)
-  const [distanceNm, setDistanceNm] = useState(initialTrip?.distanceNm ?? "");
+  const [distanceNm, setDistanceNm] = useState(initialTrip?.distanceNm ?? '');
   const [calcFromMap, setCalcFromMap] = useState(true);
 
-  // Files & UI
+  // Files
   const [files, setFiles] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
-  /* Load boats & places once (with guard) */
+  /* Load boats & places */
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const [bts, pls] = await Promise.all([
-          api("/api/boats", { token }),
-          api("/api/places", { token }),
+          api('/api/boats', { token }),
+          api('/api/places', { token }),
         ]);
         if (!alive) return;
         setBoats(bts || []);
@@ -271,38 +258,32 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  /* Shared handler for picking start/end on the map (reverse geocode + set UI name) */
+  /* Shared handler for picking start/end on the map */
   const applyPickedPoint = useCallback(async (kind, p) => {
     const label = await reverseGeocodeLatLng(p.lat, p.lng);
-    if (kind === "start") {
+    if (kind === 'start') {
       setStart((prev) =>
-        prev
-          ? { ...prev, lat: p.lat, lng: p.lng, name: label }
-          : { ...p, name: label }
+        prev ? { ...prev, lat: p.lat, lng: p.lng, name: label } : { ...p, name: label }
       );
       setStartName(label);
       setStartAuto(false);
     } else {
       setEnd((prev) =>
-        prev
-          ? { ...prev, lat: p.lat, lng: p.lng, name: label }
-          : { ...p, name: label }
+        prev ? { ...prev, lat: p.lat, lng: p.lng, name: label } : { ...p, name: label }
       );
       setEndName(label);
       setEndAuto(false);
     }
   }, []);
 
-  /* When drawing a route, auto-derive start (first) and end (last) with labels */
+  /* When drawing a route, derive start (first) and end (last) with labels */
   useEffect(() => {
-    if (!(pickerEnabled && pickerTarget === "route")) return;
+    if (!(pickerEnabled && pickerTarget === 'route')) return;
     if (!Array.isArray(route) || route.length === 0) return;
 
     (async () => {
-      // Start: first point (only if not manually set or previously auto-set)
       if ((!start || startAuto) && route.length >= 1) {
         const p0 = route[0];
         const label0 = await reverseGeocodeLatLng(p0.lat, p0.lng);
@@ -310,8 +291,6 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
         setStartName(label0);
         setStartAuto(true);
       }
-
-      // End: last point follows while drawing
       if (route.length >= 1 && (endAuto || !end)) {
         const last = route[route.length - 1];
         const labelLast = await reverseGeocodeLatLng(last.lat, last.lng);
@@ -326,20 +305,19 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
   useEffect(() => {
     if (!calcFromMap) return;
     const nm = calcRouteNm(route, start, end);
-    setDistanceNm(nm ? nm.toFixed(2) : "");
+    setDistanceNm(nm ? nm.toFixed(2) : '');
   }, [calcFromMap, route, start, end]);
 
   /* Submit handler */
   async function onSubmit(e) {
     e.preventDefault();
-    setError("");
+    setError('');
 
-    if (!title.trim()) return setError("Rubrik krävs.");
-    if (!date) return setError("Datum krävs.");
+    if (!title.trim()) return setError('Rubrik krävs.');
+    if (!date) return setError('Datum krävs.');
 
     const durationMinutes =
-      (Number.isFinite(+hours) ? +hours * 60 : 0) +
-      (Number.isFinite(+mins) ? +mins : 0);
+      (Number.isFinite(+hours) ? +hours * 60 : 0) + (Number.isFinite(+mins) ? +mins : 0);
 
     const body = {
       title: title.trim(),
@@ -347,7 +325,7 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
       durationMinutes: durationMinutes || undefined,
       crew: crewCsv
         ? crewCsv
-            .split(",")
+            .split(',')
             .map((s) => s.trim())
             .filter(Boolean)
         : [],
@@ -356,500 +334,377 @@ export default function TripForm({ initialTrip = null, mode = "create" }) {
       end: end ? { ...end, name: endName || end?.name } : undefined,
       route: route?.length ? route : undefined,
       wind:
-        windDir || windMs !== ""
-          ? {
-              dir: windDir || undefined,
-              speedMs: windMs ? Number(windMs) : undefined,
-            }
+        windDir || windMs !== ''
+          ? { dir: windDir || undefined, speedMs: windMs ? Number(windMs) : undefined }
           : undefined,
       weather: weather || undefined,
       boatId: boatId || undefined,
       distanceNm:
-        distanceNm !== "" && !Number.isNaN(Number(distanceNm))
-          ? Number(distanceNm)
-          : undefined,
+        distanceNm !== '' && !Number.isNaN(Number(distanceNm)) ? Number(distanceNm) : undefined,
     };
 
     try {
       setSaving(true);
       if (files.length > 0) {
         const fd = new FormData();
-        fd.append("data", JSON.stringify(body));
-        files.forEach((f) => fd.append("photos", f));
-        if (mode === "edit" && initialTrip?._id) {
+        fd.append('data', JSON.stringify(body));
+        files.forEach((f) => fd.append('photos', f));
+        if (mode === 'edit' && initialTrip?._id) {
           await api(`/api/trips/${initialTrip._id}`, {
-            method: "PUT",
+            method: 'PUT',
             token,
             body: fd,
             isMultipart: true,
           });
         } else {
-          await api("/api/trips", {
-            method: "POST",
-            token,
-            body: fd,
-            isMultipart: true,
-          });
+          await api('/api/trips', { method: 'POST', token, body: fd, isMultipart: true });
         }
       } else {
-        if (mode === "edit" && initialTrip?._id) {
-          await api(`/api/trips/${initialTrip._id}`, {
-            method: "PUT",
-            token,
-            body,
-          });
+        if (mode === 'edit' && initialTrip?._id) {
+          await api(`/api/trips/${initialTrip._id}`, { method: 'PUT', token, body });
         } else {
-          await api("/api/trips", { method: "POST", token, body });
+          await api('/api/trips', { method: 'POST', token, body });
         }
       }
-      nav("/");
+      nav('/');
     } catch (err) {
-      setError(err.message || "Kunde inte spara resan.");
+      setError(err.message || 'Kunde inte spara resan.');
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className='lg:grid lg:grid-cols-[minmax(360px,1fr)_400px] xl:grid-cols-[minmax(380px,1fr)_460px] lg:items-start gap-6 overflow-x-hidden'>
-      {/* LEFT: form */}
-      <div className='min-w-0'>
-        <h1 className='text-2xl md:text-3xl font-bold mb-4'>
-          {mode === "edit" ? "Redigera resa" : "Logga en resa"}
-        </h1>
+    <div className="mx-auto max-w-3xl">
+      {error && (
+        <Card variant="outline" className="mb-4 border-red-300 bg-red-50">
+          <CardContent className="text-red-700 p-4">{error}</CardContent>
+        </Card>
+      )}
 
-        {error && (
-          <div className='mb-3 border border-red-300 bg-red-50 text-red-700 p-3'>
-            {error}
-          </div>
-        )}
+      <Card variant="elevated" radius="xl">
+        <CardHeader className="pb-6" padding="lg">
+          <CardTitle className="text-2xl lg:text-3xl">
+            {mode === 'edit' ? 'Redigera resa' : 'Logga en resa'}
+          </CardTitle>
+        </CardHeader>
 
-        <form
-          onSubmit={onSubmit}
-          className='grid gap-5 bg-white border p-4 md:p-6'
-        >
-          {/* Title */}
-          <div className='grid gap-2'>
-            <label className='font-medium' htmlFor='title'>
-              Rubrik
-            </label>
-            <input
-              id='title'
-              className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
+        <CardContent padding="lg" className="space-y-6">
+          <form onSubmit={onSubmit} className="space-y-6" noValidate>
+            {/* Title */}
+            <Input
+              label="Rubrik"
+              id="title"
+              placeholder="En rubrik för resan"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder='En rubrik för resan'
               required
             />
-          </div>
 
-          {/* Date + duration */}
-          <div className='grid md:grid-cols-2 gap-4'>
-            <div className='grid gap-2'>
-              <label className='font-medium' htmlFor='date'>
-                Datum
-              </label>
-              <input
-                id='date'
-                type='date'
-                className='border px-3 py-2 grow outline-none focus:ring-2 focus:ring-brand-primary/30'
+            {/* Date + duration */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Datum"
+                id="date"
+                type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
               />
-            </div>
-            <div className='grid gap-2'>
-              <label className='font-medium'>Seglingstid</label>
-              <div className='flex items-center gap-2'>
-                <input
-                  type='number'
-                  min='0'
-                  placeholder='h'
-                  className='border px-3 py-2 w-20 outline-none focus:ring-2 focus:ring-brand-primary/30'
-                  value={hours}
-                  onChange={(e) => setHours(numOrEmpty(e.target.value))}
-                />
-                <span className='text-gray-600'>h</span>
-                <input
-                  type='number'
-                  min='0'
-                  max='59'
-                  placeholder='min'
-                  className='border px-3 py-2 w-24 outline-none focus:ring-2 focus:ring-brand-primary/30'
-                  value={mins}
-                  onChange={(e) => setMins(numOrEmpty(e.target.value))}
-                />
-                <span className='text-gray-600'>min</span>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-800">Seglingstid</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="hours"
+                    type="number"
+                    inputClassName="w-20"
+                    placeholder="h"
+                    min={0}
+                    value={hours}
+                    onChange={(e) => setHours(numOrEmpty(e.target.value))}
+                  />
+                  <span className="text-sm text-gray-600">h</span>
+                  <Input
+                    id="mins"
+                    type="number"
+                    inputClassName="w-20"
+                    placeholder="min"
+                    min={0}
+                    max={59}
+                    value={mins}
+                    onChange={(e) => setMins(numOrEmpty(e.target.value))}
+                  />
+                  <span className="text-sm text-gray-600">min</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Start & End with decorative column */}
-          <label className='font-medium'>Start– och slutdestination</label>
-          <div className='grid grid-cols-[24px_1fr] items-stretch gap-2'>
-            {/* Decorative timeline */}
-            <div
-              className='flex flex-col items-center h-full py-2 select-none'
-              aria-hidden
-            >
-              <span className='mt-1 h-2.5 w-2.5 rounded-full ring-1 ring-gray-600' />
-              <span className='flex-1 w-px border-l border-dashed border-gray-400 my-2' />
-              <svg
-                width='16'
-                height='16'
-                viewBox='0 0 24 24'
-                className='text-red-500 mb-1'
-              >
-                <path
-                  fill='currentColor'
-                  d='M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7m0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z'
-                />
-              </svg>
+            {/* Start & End */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-800">
+                Start– och slutdestination
+              </label>
+
+              <div className="grid grid-cols-[24px_1fr] items-stretch gap-2">
+                {/* Decorative timeline */}
+                <div className="flex h-full select-none flex-col items-center py-2" aria-hidden>
+                  <span className="mt-1 h-2.5 w-2.5 rounded-full ring-1 ring-gray-600" />
+                  <span className="my-2 w-px flex-1 border-l border-dashed border-gray-400" />
+                  <svg width="16" height="16" viewBox="0 0 24 24" className="mb-1 text-red-500">
+                    <path
+                      fill="currentColor"
+                      d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7m0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"
+                    />
+                  </svg>
+                </div>
+
+                <div className="grid gap-3">
+                  <PlaceAutocomplete
+                    noIcon
+                    value={startName}
+                    onChange={setStartName}
+                    onPick={(p) => {
+                      setPickerEnabled(true);
+                      setPickerTarget('start');
+                      if (p.location?.lat && p.location?.lng) {
+                        applyPickedPoint('start', { lat: p.location.lat, lng: p.location.lng });
+                      }
+                    }}
+                    places={places}
+                    placeholder="Välj startdestination, eller markera på kartan…"
+                    onFocus={() => {
+                      setPickerEnabled(true);
+                      setPickerTarget('start');
+                    }}
+                  />
+                  <PlaceAutocomplete
+                    noIcon
+                    value={endName}
+                    onChange={setEndName}
+                    onPick={(p) => {
+                      setPickerEnabled(true);
+                      setPickerTarget('end');
+                      if (p.location?.lat && p.location?.lng) {
+                        applyPickedPoint('end', { lat: p.location.lat, lng: p.location.lng });
+                      }
+                    }}
+                    places={places}
+                    placeholder="Välj slutdestination, eller markera på kartan…"
+                    onFocus={() => {
+                      setPickerEnabled(true);
+                      setPickerTarget('end');
+                    }}
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Inputs */}
-            <div className='grid gap-3'>
-              <PlaceAutocomplete
-                noIcon
-                value={startName}
-                onChange={setStartName}
-                onPick={(p) => {
-                  setPickerEnabled(true);
-                  setPickerTarget("start");
-                  if (p.location?.lat && p.location?.lng) {
-                    applyPickedPoint("start", {
-                      lat: p.location.lat,
-                      lng: p.location.lng,
-                    });
-                  }
-                }}
-                places={places}
-                placeholder='Välj startdestination, eller markera på kartan…'
-                onFocus={() => {
-                  setPickerEnabled(true);
-                  setPickerTarget("start");
-                }}
-              />
-              <PlaceAutocomplete
-                noIcon
-                value={endName}
-                onChange={setEndName}
-                onPick={(p) => {
-                  setPickerEnabled(true);
-                  setPickerTarget("end");
-                  if (p.location?.lat && p.location?.lng) {
-                    applyPickedPoint("end", {
-                      lat: p.location.lat,
-                      lng: p.location.lng,
-                    });
-                  }
-                }}
-                places={places}
-                placeholder='Välj slutdestination, eller markera på kartan…'
-                onFocus={() => {
-                  setPickerEnabled(true);
-                  setPickerTarget("end");
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Route actions */}
-          <div className='mt-2 flex items-center gap-2'>
-            <button
-              type='button'
-              onClick={() => {
-                setPickerEnabled(true);
-                setPickerTarget("route");
-              }}
-              className={`px-3 py-1.5 border text-sm ${
-                pickerEnabled && pickerTarget === "route"
-                  ? "bg-brand-secondary text-white"
-                  : "bg-white"
-              }`}
-            >
-              Rita rutt på kartan
-            </button>
-
-            {pickerEnabled && pickerTarget === "route" && (
-              <button
-                type='button'
+            {/* Route actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant={pickerEnabled && pickerTarget === 'route' ? 'secondary' : 'outline'}
+                size="sm"
                 onClick={() => {
-                  setRoute([]);
-                  if (startAuto) {
-                    setStart(null);
-                    setStartName("");
-                    setStartAuto(false);
-                  }
-                  if (endAuto) {
-                    setEnd(null);
-                    setEndName("");
-                    setEndAuto(false);
-                  }
+                  setPickerEnabled(true);
+                  setPickerTarget('route');
                 }}
-                className='px-3 py-1.5 border text-sm bg-white'
               >
-                Ångra rutt
-              </button>
-            )}
-          </div>
+                Rita rutt
+              </Button>
 
-          {/* --- MOBILE/TABLET: map full width + Distance/Wind below --- */}
-          <section className='lg:hidden grid gap-4'>
-            <TripMap
-              mode={derivedMapMode}
-              start={start}
-              end={end}
-              route={route}
-              setStart={(p) => applyPickedPoint("start", p)}
-              setEnd={(p) => applyPickedPoint("end", p)}
-              setRoute={setRoute}
-              height={300}
-            />
+              {pickerEnabled && pickerTarget === 'route' && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setRoute([]);
+                    if (startAuto) {
+                      setStart(null);
+                      setStartName('');
+                      setStartAuto(false);
+                    }
+                    if (endAuto) {
+                      setEnd(null);
+                      setEndName('');
+                      setEndAuto(false);
+                    }
+                  }}
+                >
+                  Ångra rutt
+                </Button>
+              )}
+            </div>
 
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+            {/* Map */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-800">Karta</label>
+              <div className="w-full rounded-lg overflow-hidden border">
+                <TripMap
+                  mode={derivedMapMode}
+                  start={start}
+                  end={end}
+                  route={route}
+                  setStart={(p) => applyPickedPoint('start', p)}
+                  setEnd={(p) => applyPickedPoint('end', p)}
+                  setRoute={setRoute}
+                  height={400}
+                />
+              </div>
+            </div>
+
+            {/* Distance & Wind */}
+            <div className="grid gap-4 sm:grid-cols-2">
               {/* Distance */}
-              <div className='grid gap-2'>
-                <label className='font-medium'>Distans</label>
-                <div className='grid gap-2'>
-                  <div className='flex items-center gap-2'>
-                    <input
-                      type='number'
-                      min='0'
-                      step='0.01'
-                      className='border px-3 py-2 w-40 outline-none focus:ring-2 focus:ring-brand-primary/30 disabled:bg-gray-100'
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-800">Distans</label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      inputClassName="w-24 disabled:bg-gray-100"
                       value={distanceNm}
                       onChange={(e) => setDistanceNm(e.target.value)}
-                      placeholder='NM'
+                      placeholder="NM"
                       disabled={calcFromMap}
                     />
-                    <span className='text-gray-600'>NM</span>
+                    <span className="text-sm text-gray-600 flex-shrink-0">NM</span>
                   </div>
-                  <label className='inline-flex items-center gap-2 text-sm'>
+                  <label className="inline-flex items-center gap-2 text-sm">
                     <input
-                      type='checkbox'
-                      className='accent-brand-primary'
+                      type="checkbox"
+                      className="accent-brand-primary"
                       checked={calcFromMap}
                       onChange={(e) => setCalcFromMap(e.target.checked)}
                     />
-                    Beräkna från karta
+                    <span className="text-gray-700">Beräkna från karta</span>
                   </label>
                 </div>
               </div>
 
               {/* Wind */}
-              <div className='grid gap-2'>
-                <label className='font-medium'>Vind (m/s)</label>
-                <div className='flex items-center gap-2'>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-800">Vind</label>
+                <div className="flex items-center gap-2">
                   <select
-                    className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
+                    className="h-10 rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/30 flex-shrink-0"
                     value={windDir}
                     onChange={(e) => setWindDir(e.target.value)}
                   >
-                    <option value=''>Riktning</option>
+                    <option value="">Riktning</option>
                     {DIRS.map((d) => (
                       <option key={d} value={d}>
                         {d}
                       </option>
                     ))}
                   </select>
-                  <input
-                    type='number'
-                    min='0'
-                    step='0.1'
-                    className='border px-3 py-2 w-28 outline-none focus:ring-2 focus:ring-brand-primary/30'
-                    placeholder='m/s'
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    inputClassName="w-20"
+                    placeholder="m/s"
                     value={windMs}
                     onChange={(e) => setWindMs(e.target.value)}
                   />
-                  <span className='text-gray-600'>m/s</span>
+                  <span className="text-sm text-gray-600 flex-shrink-0">m/s</span>
                 </div>
               </div>
             </div>
-          </section>
 
-          {/* --- DESKTOP: Distance & Wind in the form column --- */}
-          <div className='hidden lg:grid lg:grid-cols-2 gap-6'>
-            <div>
-              <label className='font-medium'>Distans</label>
-              <div className='mt-2 flex items-center gap-2'>
-                <input
-                  type='number'
-                  min='0'
-                  step='0.01'
-                  className='h-11 border px-3 py-2 w-40 outline-none focus:ring-2 focus:ring-brand-primary/30 disabled:bg-gray-100'
-                  value={distanceNm}
-                  onChange={(e) => setDistanceNm(e.target.value)}
-                  placeholder='NM'
-                  disabled={calcFromMap}
-                />
-                <span className='text-gray-600'>NM</span>
-              </div>
-              <label className='mt-2 inline-flex items-center gap-2 text-sm'>
-                <input
-                  type='checkbox'
-                  className='accent-brand-primary'
-                  checked={calcFromMap}
-                  onChange={(e) => setCalcFromMap(e.target.checked)}
-                />
-                Beräkna från karta
-              </label>
-            </div>
-
-            <div>
-              <label className='font-medium'>Vind (m/s)</label>
-              <div className='mt-2 flex items-center gap-2'>
+            {/* Boat & Crew */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 min-w-0">
+                <label className="text-sm font-medium text-gray-800" htmlFor="boat">
+                  Båt
+                </label>
                 <select
-                  className='h-11 border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
-                  value={windDir}
-                  onChange={(e) => setWindDir(e.target.value)}
+                  id="boat"
+                  className="w-full h-10 rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/30"
+                  value={boatId}
+                  onChange={(e) => setBoatId(e.target.value)}
                 >
-                  <option value=''>Riktning</option>
-                  {DIRS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
+                  <option value="">{boats.length ? 'Välj båt (valfritt)' : 'Inga båtar'}</option>
+                  {boats.map((b) => (
+                    <option key={b._id} value={b._id}>
+                      {b.name}
                     </option>
                   ))}
                 </select>
-                <input
-                  type='number'
-                  min='0'
-                  step='0.1'
-                  className='h-11 border px-3 py-2 w-28 outline-none focus:ring-2 focus:ring-brand-primary/30'
-                  placeholder='m/s'
-                  value={windMs}
-                  onChange={(e) => setWindMs(e.target.value)}
-                />
-                <span className='text-gray-600'>m/s</span>
               </div>
-            </div>
-          </div>
-
-          {/* Boat & Crew */}
-          <div className='grid md:grid-cols-2 gap-4'>
-            <div className='grid gap-2'>
-              <label className='font-medium' htmlFor='boat'>
-                Båt
-              </label>
-              <select
-                id='boat'
-                className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
-                value={boatId}
-                onChange={(e) => setBoatId(e.target.value)}
-              >
-                <option value=''>
-                  {boats.length ? "Välj båt (valfritt)" : "Inga båtar ännu"}{" "}
-                </option>
-                {boats.map((b) => (
-                  <option key={b._id} value={b._id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className='grid gap-2'>
-              <label className='font-medium' htmlFor='crew'>
-                Besättning
-              </label>
-              <input
-                id='crew'
-                className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
-                placeholder='Lisa, Kalle, …'
+              <Input
+                label="Besättning"
+                id="crew"
+                placeholder="Lisa, Kalle, …"
                 value={crewCsv}
                 onChange={(e) => setCrewCsv(e.target.value)}
               />
             </div>
-          </div>
 
-          {/* Weather */}
-          <div className='grid gap-2'>
-            <label className='font-medium'>Väder</label>
-            <div className='flex gap-2 flex-wrap'>
-              {WEATHER_OPTS.map(({ key, label, Icon }) => {
-                const active = weather === key;
-                return (
-                  <button
-                    type='button'
-                    key={key}
-                    onClick={() => setWeather(active ? "" : key)}
-                    className={`px-3 py-2 border inline-flex items-center gap-2 select-none ${
-                      active
-                        ? "bg-brand-primary text-white border-brand-primary"
-                        : "bg-white"
-                    }`}
-                    title={label}
-                    aria-pressed={active}
-                  >
-                    <Icon size={18} />
-                    <span className='hidden sm:inline text-sm'>{label}</span>
-                  </button>
-                );
-              })}
+            {/* Weather */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-800">Väder</label>
+              <div className="flex flex-wrap gap-2">
+                {WEATHER_OPTS.map(({ key, label, Icon }) => {
+                  const active = weather === key;
+                  return (
+                    <Button
+                      key={key}
+                      type="button"
+                      variant={active ? 'primary' : 'outline'}
+                      size="sm"
+                      aria-pressed={active}
+                      onClick={() => setWeather(active ? '' : key)}
+                      leftIcon={<Icon size={16} />}
+                      className="flex-shrink-0"
+                    >
+                      <span className="hidden sm:inline">{label}</span>
+                      <span className="sm:hidden sr-only">{label}</span>
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Notes */}
-          <div className='grid gap-2'>
-            <label className='font-medium' htmlFor='notes'>
-              Anteckningar
-            </label>
-            <textarea
-              id='notes'
-              rows={5}
-              className='border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30'
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder='Skriv något kul från resan…'
-            />
-          </div>
+            {/* Notes */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-800" htmlFor="notes">
+                Anteckningar
+              </label>
+              <textarea
+                id="notes"
+                rows={4}
+                className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/30 resize-vertical"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Skriv något kul från resan…"
+              />
+            </div>
 
-          {/* Photos */}
-          <div className='grid gap-2'>
-            <label className='font-medium'>Bilder</label>
-            <PhotoPicker files={files} onChange={setFiles} />
-            {mode === "edit" && initialTrip?.photos?.length > 0 && (
-              <p className='text-xs text-gray-600'>
-                Befintliga bilder behålls; nya läggs till.
-              </p>
-            )}
-          </div>
+            {/* Photos */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-800">Bilder</label>
+              <PhotoPicker files={files} onChange={setFiles} />
+              {mode === 'edit' && initialTrip?.photos?.length > 0 && (
+                <p className="text-xs text-gray-600">Befintliga bilder behålls; nya läggs till.</p>
+              )}
+            </div>
 
-          {/* Actions */}
-          <div className='flex items-center justify-end gap-2'>
-            <button
-              type='button'
-              onClick={() => nav(-1)}
-              className='px-4 py-2 border'
-            >
-              Avbryt
-            </button>
-            <button
-              disabled={saving}
-              className='px-4 py-2 bg-brand-primary text-white disabled:opacity-60'
-            >
-              {saving
-                ? "Sparar…"
-                : mode === "edit"
-                ? "Uppdatera"
-                : "Spara resa"}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* RIGHT: sticky map on desktop */}
-      <aside className='hidden lg:block sticky top-20 min-w-0 h-[calc(100vh-140px)] overflow-hidden'>
-        <TripMap
-          mode={derivedMapMode}
-          start={start}
-          end={end}
-          route={route}
-          setStart={(p) => applyPickedPoint("start", p)}
-          setEnd={(p) => applyPickedPoint("end", p)}
-          setRoute={setRoute}
-          height='100%'
-        />
-      </aside>
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t">
+              <Button type="button" variant="ghost" onClick={() => nav(-1)}>
+                Avbryt
+              </Button>
+              <Button type="submit" isLoading={saving} disabled={saving}>
+                {mode === 'edit' ? 'Uppdatera' : 'Spara resa'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

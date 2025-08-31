@@ -1,6 +1,6 @@
-const TrackingSession = require("../models/TrackingSession");
+import TrackingSession from '../models/TrackingSession.js';
 
-// POST /api/tracking/start
+// POST - start tracking trip
 async function startSession(req, res) {
   const session = await TrackingSession.create({
     userId: req.userId,
@@ -9,7 +9,7 @@ async function startSession(req, res) {
   res.status(201).json({ sessionId: session._id });
 }
 
-// POST /api/tracking/:id/point
+// POST - record trip
 async function addPoint(req, res) {
   const { lat, lng, t } = req.body || {};
   const session = await TrackingSession.findOneAndUpdate(
@@ -17,19 +17,19 @@ async function addPoint(req, res) {
     { $push: { points: { lat, lng, t } } },
     { new: true }
   );
-  if (!session) return res.status(404).json({ message: "Session not found" });
+  if (!session) return res.status(404).json({ message: 'Session not found' });
   res.json({ ok: true });
 }
 
-// POST /api/tracking/:id/stop
+// POST - save live trip
 async function stopSession(req, res) {
   const session = await TrackingSession.findOneAndUpdate(
     { _id: req.params.id, userId: req.userId, isActive: true },
     { isActive: false, endedAt: new Date() },
     { new: true }
   );
-  if (!session) return res.status(404).json({ message: "Session not found" });
+  if (!session) return res.status(404).json({ message: 'Session not found' });
   res.json({ ok: true, session });
 }
 
-module.exports = { startSession, addPoint, stopSession };
+export default { startSession, addPoint, stopSession };

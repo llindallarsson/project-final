@@ -44,7 +44,7 @@ function ClickHandler({ mode, setStart, setEnd, route, setRoute }) {
         setRoute([...(route || []), { lat, lng, t }]);
       }
     },
-    // Optional: right-click = undo last point while drawing
+
     contextmenu() {
       if (mode !== "draw" || !Array.isArray(route) || route.length === 0)
         return;
@@ -56,24 +56,6 @@ function ClickHandler({ mode, setStart, setEnd, route, setRoute }) {
   return null;
 }
 
-/**
- * TripMap — simple Leaflet map without auto-fit/auto-zoom.
- *
- * Props
- * - mode: 'view' | 'set-start' | 'set-end' | 'draw'
- * - start: { lat: number, lng: number } | null
- * - end:   { lat: number, lng: number } | null
- * - route: Array<{ lat: number, lng: number, t?: string }>
- * - setStart?: (p) => void
- * - setEnd?: (p) => void
- * - setRoute?: (arr) => void
- * - center?: { lat: number, lng: number }    // initial center (default: Stockholm)
- * - zoom?: number                             // initial zoom (default: 9)
- * - height?: number | string                  // px number or CSS size ('100%')
- * - className?: string
- * - autoFit?: boolean (kept for compatibility; not used)
- * - showRecenter?: boolean (kept for compatibility; not used)
- */
 export default function TripMap({
   mode = "view",
   start,
@@ -86,11 +68,7 @@ export default function TripMap({
   zoom = 9,
   height = 320,
   className = "",
-  // compatibility placeholders (not used)
-  autoFit = false, // eslint-disable-line no-unused-vars
-  showRecenter = true, // eslint-disable-line no-unused-vars
 }) {
-  // Compose container inline height once
   const style = {
     height: typeof height === "number" ? `${height}px` : height || "320px",
     width: "100%",
@@ -99,7 +77,7 @@ export default function TripMap({
   const isDrawing = mode === "draw";
   const isPicking = mode === "set-start" || mode === "set-end";
 
-  // Memoize polyline positions so we don't remap on every render
+  // Memoize polyline positions
   const polylinePositions = useMemo(() => {
     if (!Array.isArray(route) || route.length < 2) return null;
     return route.map((p) => [p.lat, p.lng]);
@@ -107,7 +85,6 @@ export default function TripMap({
 
   const containerClasses = [
     "w-full overflow-hidden border",
-    // subtle rounded corners for consistency with cards
     "rounded",
     className || "",
   ]
@@ -125,12 +102,11 @@ export default function TripMap({
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={zoom}
-        // No auto-fit: we deliberately avoid `bounds` so user keeps control while drawing
         style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
-          url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+          attribution="&copy; OpenStreetMap contributors"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         {start?.lat != null && start?.lng != null && (
@@ -147,7 +123,7 @@ export default function TripMap({
             pathOptions={{
               weight: 4,
               opacity: 0.9,
-              // Show dashes while drawing to convey "in-progress"
+              // Show dashes while drawing
               ...(isDrawing ? { dashArray: "6 8" } : {}),
             }}
           />

@@ -1,5 +1,5 @@
-const path = require('path');
-const Trip = require('../models/Trip');
+import path from 'path';
+import Trip from '../models/Trip.js';
 
 // GET - show all trips
 async function listTrips(req, res) {
@@ -58,4 +58,4 @@ async function deleteTrip(req, res) {
   res.json({ ok: true });
 }
 
-module.exports = { listTrips, createTrip, getTrip, updateTrip, deleteTrip };
+export default { listTrips, createTrip, getTrip, updateTrip, deleteTrip };

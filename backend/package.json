@@ -1,12 +1,10 @@
 {
   "name": "vindra-backend",
   "version": "1.0.0",
-  "type": "commonjs",
+  "type": "module",
   "main": "server.js",
   "scripts": {
-    "build": "babel . --out-dir dist --ignore node_modules",
-    "start": "node dist/server.js",
-    "dev": "nodemon server.js --exec babel-node"
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "@babel/core": "^7.17.9",

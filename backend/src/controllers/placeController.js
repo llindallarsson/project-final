@@ -1,4 +1,4 @@
-const Place = require('../models/Place');
+import Place from '../models/Place.js';
 
 // GET - show saved places
 async function listPlaces(req, res) {
@@ -24,4 +24,4 @@ async function deletePlace(req, res) {
   res.json({ ok: true });
 }
 
-module.exports = { listPlaces, createPlace, deletePlace };
+export default { listPlaces, createPlace, deletePlace };

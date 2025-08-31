@@ -1,51 +1,60 @@
-import { useState } from "react";
-import { api } from "../api";
-import { useAuth } from "../store/auth";
+import { useState } from 'react';
+import { api } from '../api';
+import { useAuth } from '../store/auth';
+import Input from './ui/Input';
+import Button from './ui/Button';
+// Om du vill använda samma bilduppladdare som i TripForm – annars ta bort nästa rad och fallbacka på <input type="file" />
+import PhotoPicker from './PhotoPicker';
 
 export default function BoatForm({
-  mode = "create", // "create" | "edit"
-  initialBoat = null, // used when mode === "edit"
+  mode = 'create', // "create" | "edit"
+  initialBoat = null, // används när mode === "edit"
   onSaved, // callback(savedBoat)
-  onCancel, // optional cancel handler
-  maxPhotoSizeMB = 10, // guard large uploads
+  onCancel, // valfri cancel-handler
+  maxPhotoSizeMB = 10, // storleksvakt för uppladdning
 }) {
   const token = useAuth((s) => s.token);
 
   // --- Form state ---
-  const [name, setName] = useState(initialBoat?.name ?? "");
-  const [model, setModel] = useState(initialBoat?.model ?? "");
-  const [lengthM, setLengthM] = useState(
-    initialBoat?.lengthM != null ? String(initialBoat.lengthM) : ""
+  const [name, setName] = useState(initialBoat?.name ?? '');
+  const [model, setModel] = useState(initialBoat?.model ?? '');
+  const [lengthStr, setLengthStr] = useState(
+    initialBoat?.lengthM != null ? String(initialBoat.lengthM) : ''
   );
-  const [draftM, setDraftM] = useState(
-    initialBoat?.draftM != null ? String(initialBoat.draftM) : ""
+  const [draftStr, setDraftStr] = useState(
+    initialBoat?.draftM != null ? String(initialBoat.draftM) : ''
   );
-  const [engine, setEngine] = useState(initialBoat?.engine ?? "");
-  const [notes, setNotes] = useState(initialBoat?.notes ?? "");
-  const [file, setFile] = useState(null);
+  const [engine, setEngine] = useState(initialBoat?.engine ?? '');
+  const [notes, setNotes] = useState(initialBoat?.notes ?? '');
+  const [files, setFiles] = useState([]); // vi använder samma PhotoPicker-API som TripForm
 
   // --- UI state ---
   const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState("");
+  const [err, setErr] = useState('');
 
-  // Utility: parse numeric input safely (empty string -> undefined)
-  const numOrUndef = (v) => (v === "" ? undefined : Number(v));
+  // Locale-säker parsing av decimaltal (tillåter komma)
+  const parseNum = (v) => {
+    if (v === '' || v == null) return undefined;
+    const n = Number(String(v).replace(',', '.'));
+    return Number.isFinite(n) ? n : undefined;
+  };
 
-  // Utility: build payload, optionally multipart if a photo is selected
+  // Bygg payload – multipart om vi har bild
   function buildPayload() {
     const body = {
       name: name.trim(),
       model: model.trim() || undefined,
-      lengthM: numOrUndef(lengthM),
-      draftM: numOrUndef(draftM),
+      lengthM: parseNum(lengthStr),
+      draftM: parseNum(draftStr),
       engine: engine.trim() || undefined,
       notes: notes.trim() || undefined,
     };
 
+    const file = files?.[0] || null;
     if (file) {
       const fd = new FormData();
-      fd.append("data", JSON.stringify(body));
-      fd.append("photo", file);
+      fd.append('data', JSON.stringify(body));
+      fd.append('photo', file);
       return { data: fd, isMultipart: true };
     }
     return { data: body, isMultipart: false };
@@ -53,13 +62,14 @@ export default function BoatForm({
 
   async function onSubmit(e) {
     e.preventDefault();
-    setErr("");
+    setErr('');
 
-    // Basic client-side validation
+    // Klientvalidering
     if (!name.trim()) {
-      setErr("Namn är obligatoriskt.");
+      setErr('Namn är obligatoriskt.');
       return;
     }
+    const file = files?.[0];
     if (file && file.size > maxPhotoSizeMB * 1024 * 1024) {
       setErr(`Bilden får max vara ${maxPhotoSizeMB} MB.`);
       return;
@@ -69,159 +79,112 @@ export default function BoatForm({
 
     try {
       setSaving(true);
-
       const saved =
-        mode === "edit" && initialBoat?._id
+        mode === 'edit' && initialBoat?._id
           ? await api(`/api/boats/${initialBoat._id}`, {
-              method: "PUT",
+              method: 'PUT',
               token,
               body: data,
               isMultipart,
             })
-          : await api("/api/boats", {
-              method: "POST",
+          : await api('/api/boats', {
+              method: 'POST',
               token,
               body: data,
               isMultipart,
             });
 
       onSaved?.(saved);
-    } catch (e) {
-      setErr(e.message || "Kunde inte spara båten.");
+    } catch (e2) {
+      setErr(e2.message || 'Kunde inte spara båten.');
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      noValidate
-      className="grid gap-4 bg-white border p-4 md:p-6"
-    >
-      {/* Error banner */}
+    <form onSubmit={onSubmit} noValidate className="grid gap-4">
+      {/* Top-error (API/validering) */}
       {err && (
-        <div
+        <p
           role="alert"
-          className="border border-red-300 bg-red-50 text-red-700 p-3 rounded"
+          aria-live="polite"
+          className="rounded border border-red-300 bg-red-50 p-3 text-red-700"
         >
           {err}
-        </div>
+        </p>
       )}
 
-      {/* Name */}
-      <div className="grid gap-2">
-        <label className="font-medium" htmlFor="boat-name">
-          Namn
-        </label>
-        <input
-          id="boat-name"
-          className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          aria-invalid={!!err && !name.trim()}
-          autoComplete="off"
+      <Input
+        label="Namn"
+        id="boat-name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+        error={!name.trim() ? ' ' : undefined /* reservera höjd när tomt */}
+      />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Input
+          label="Modell"
+          id="boat-model"
+          placeholder="Albin Cirus 78"
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+        />
+        <Input
+          label="Längd (m)"
+          id="boat-length"
+          type="text"
+          inputMode="decimal"
+          placeholder="t.ex. 7,8"
+          value={lengthStr}
+          onChange={(e) => setLengthStr(e.target.value)}
+          hint="Du kan skriva 7,8 eller 7.8"
         />
       </div>
 
-      {/* Model & Length */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="grid gap-2">
-          <label className="font-medium" htmlFor="boat-model">
-            Modell
-          </label>
-          <input
-            id="boat-model"
-            className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="Albin Cirus 78"
-            autoComplete="off"
-          />
-        </div>
-
-        <div className="grid gap-2">
-          <label className="font-medium" htmlFor="boat-length">
-            Längd (m)
-          </label>
-          <input
-            id="boat-length"
-            type="number"
-            min="0"
-            step="0.01"
-            inputMode="decimal"
-            className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
-            value={lengthM}
-            onChange={(e) => setLengthM(e.target.value)}
-            placeholder="t.ex. 7.8"
-          />
-        </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Input
+          label="Djupgående (m)"
+          id="boat-draft"
+          type="text"
+          inputMode="decimal"
+          placeholder="t.ex. 1,49"
+          value={draftStr}
+          onChange={(e) => setDraftStr(e.target.value)}
+          hint="Du kan skriva 1,49 eller 1.49"
+        />
+        <Input
+          label="Motor"
+          id="boat-engine"
+          placeholder="Volvo Penta MD5"
+          value={engine}
+          onChange={(e) => setEngine(e.target.value)}
+        />
       </div>
 
-      {/* Draft & Engine */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="grid gap-2">
-          <label className="font-medium" htmlFor="boat-draft">
-            Djupgående (m)
-          </label>
-          <input
-            id="boat-draft"
-            type="number"
-            min="0"
-            step="0.01"
-            inputMode="decimal"
-            className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
-            value={draftM}
-            onChange={(e) => setDraftM(e.target.value)}
-            placeholder="t.ex. 1.49"
-          />
-        </div>
-
-        <div className="grid gap-2">
-          <label className="font-medium" htmlFor="boat-engine">
-            Motor
-          </label>
-          <input
-            id="boat-engine"
-            className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
-            value={engine}
-            onChange={(e) => setEngine(e.target.value)}
-            placeholder="Volvo Penta MD5"
-            autoComplete="off"
-          />
-        </div>
-      </div>
-
-      {/* Notes */}
       <div className="grid gap-2">
-        <label className="font-medium" htmlFor="boat-notes">
+        <label htmlFor="boat-notes" className="text-sm font-medium text-gray-800">
           Övrigt
         </label>
         <textarea
           id="boat-notes"
           rows={4}
-          className="border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
+          className="rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-brand-primary/30"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Anteckningar om båten..."
+          placeholder="Anteckningar om båten…"
         />
       </div>
 
-      {/* Photo */}
+      {/* Foto – använd PhotoPicker om du vill ha samma upplevelse som TripForm */}
       <div className="grid gap-2">
-        <label className="font-medium" htmlFor="boat-photo">
-          Bild (valfritt)
-        </label>
-        <input
-          id="boat-photo"
-          type="file"
-          accept="image/*"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-        />
-        {file && (
+        <label className="text-sm font-medium text-gray-800">Bild (valfritt)</label>
+        <PhotoPicker files={files} onChange={setFiles} maxFiles={1} />
+        {files?.[0] && (
           <p className="text-xs text-gray-600">
-            Vald fil: <span className="font-medium">{file.name}</span>
+            Vald fil: <span className="font-medium">{files[0].name}</span>
           </p>
         )}
       </div>
@@ -229,20 +192,13 @@ export default function BoatForm({
       {/* Actions */}
       <div className="flex items-center justify-end gap-2">
         {onCancel && (
-          <button
-            type="button"
-            className="px-4 py-2 border rounded"
-            onClick={onCancel}
-          >
+          <Button type="button" variant="ghost" onClick={onCancel}>
             Avbryt
-          </button>
+          </Button>
         )}
-        <button
-          disabled={saving}
-          className="px-4 py-2 bg-brand-primary text-white rounded disabled:opacity-60"
-        >
-          {saving ? "Sparar…" : mode === "edit" ? "Uppdatera" : "Lägg till båt"}
-        </button>
+        <Button type="submit" isLoading={saving} disabled={saving}>
+          {mode === 'edit' ? 'Uppdatera' : 'Lägg till båt'}
+        </Button>
       </div>
     </form>
   );

@@ -2,9 +2,14 @@
   "name": "project-final-parent",
   "version": "1.0.0",
   "scripts": {
-    "postinstall": "npm install --prefix backend"
+    "lint": "eslint \"src/**/*.{js,jsx}\"",
+    "lint:fix": "eslint \"src/**/*.{js,jsx}\" --fix",
+    "dev": "vite"
   },
   "dependencies": {
-    "mongodb": "^6.18.0"
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "mongodb": "^6.18.0",
+    "tailwind-merge": "^3.3.1"
   }
 }
