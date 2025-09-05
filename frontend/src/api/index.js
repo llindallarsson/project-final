@@ -1,35 +1,41 @@
-const API_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:8080"
-).replace(/\/$/, "");
+const API_BASE = (() => {
+  const env = import.meta.env;
+  // PROD / explicit base
+  if (env.VITE_API_URL) return String(env.VITE_API_URL).replace(/\/$/, '');
+  // DEV: använd Vite proxy (relativ bas)
+  if (env.DEV) return '';
+  // Fallback: same-origin
+  return '';
+})();
 
-export async function api(
-  path,
-  { method = "GET", body, token, isMultipart } = {}
-) {
-  const headers = { Accept: "application/json" };
+function buildUrl(path) {
+  if (!path) return API_BASE;
+  return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+export async function api(path, { method = 'GET', body, token, isMultipart } = {}) {
+  const headers = { Accept: 'application/json' };
   let payload = body;
 
   if (!isMultipart) {
-    headers["Content-Type"] = "application/json";
+    headers['Content-Type'] = 'application/json';
     payload = body ? JSON.stringify(body) : undefined;
   }
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(
-    `${API_URL}${path.startsWith("/") ? path : `/${path}`}`,
-    {
-      method,
-      headers,
-      body: payload,
-    }
-  );
+  let res;
+  try {
+    res = await fetch(buildUrl(path), { method, headers, body: payload });
+  } catch (e) {
+    // Nätverksnivå (t.ex. connection refused)
+    throw new Error('Kunde inte nå API:t. Är backend igång och port/proxy korrekt?');
+  }
 
-  // 204 No Content
   if (res.status === 204) return null;
 
-  // Försök tolka svar som JSON; annars fall tillbaka till text
-  let data;
+  // Läs säkert som JSON, falla tillbaka till text
   const text = await res.text();
+  let data = null;
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
@@ -37,10 +43,7 @@ export async function api(
   }
 
   if (!res.ok) {
-    const msg =
-      (data && (data.message || data.error)) ||
-      res.statusText ||
-      "Request failed";
+    const msg = (data && (data.message || data.error)) || res.statusText || 'Request failed';
     const err = new Error(msg);
     err.status = res.status;
     err.data = data;

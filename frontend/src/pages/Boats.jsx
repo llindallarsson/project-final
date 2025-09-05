@@ -1,62 +1,79 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { api } from "../api";
-import { useAuth } from "../store/auth";
-import Button from "../components/ui/Button";
-import { Card, CardContent } from "../components/ui/Card";
-import { PlusCircle, ChevronRight } from "lucide-react";
+import { ChevronRight, PlusCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
-const toRad = (x) => (x * Math.PI) / 180;
-function haversineNm(a, b) {
-  const R = 6371000; // meters
-  const dLat = toRad(b.lat - a.lat);
-  const dLon = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return (2 * R * Math.asin(Math.sqrt(h))) / 1852; // meters -> NM
+import { api } from '../api';
+import { estimateDistanceNm } from '../lib/distance.js';
+import { getPhotoUrl } from '../lib/photo';
+import ButtonLink from '../components/ui/ButtonLink';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/Card';
+import { useAuth } from '../store/auth';
+
+/* ---------- Formatters ---------- */
+const nmFmt = new Intl.NumberFormat('sv-SE', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+function initials(name = '') {
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() || '').join('');
 }
-function estimateDistanceNm(trip) {
-  if (trip?.route?.length > 1) {
-    let s = 0;
-    for (let i = 1; i < trip.route.length; i++) {
-      s += haversineNm(trip.route[i - 1], trip.route[i]);
-    }
-    return s;
+
+function BoatThumb({ boat }) {
+  const src = getPhotoUrl(boat?.photoUrl || boat?.photo);
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={boat?.name || 'Båt'}
+        className="h-14 w-14 rounded-xl object-cover border border-brand-border/40 bg-white"
+        loading="lazy"
+      />
+    );
   }
-  if (trip?.start?.lat && trip?.end?.lat) {
-    return haversineNm(trip.start, trip.end);
-  }
-  return 0;
+  return (
+    <div
+      className="h-14 w-14 rounded-xl grid place-items-center text-white font-semibold
+                 bg-gradient-to-br from-brand-primary to-brand-secondary border border-white/20"
+      aria-hidden
+    >
+      {initials(boat?.name || 'Båt')}
+    </div>
+  );
 }
 
 export default function Boats() {
   const token = useAuth((s) => s.token);
-  const nav = useNavigate();
 
   const [boats, setBoats] = useState([]);
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState("");
+  const [err, setErr] = useState('');
 
-  // Fetch boats and trips together; guard against unmounted updates
+  // Hämta båtar + resor
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         setLoading(true);
-        setErr("");
+        setErr('');
         const [bs, ts] = await Promise.all([
-          api("/api/boats", { token }),
-          api("/api/trips", { token }),
+          api('/api/boats', { token }),
+          api('/api/trips', { token }),
         ]);
         if (cancelled) return;
         setBoats(Array.isArray(bs) ? bs : []);
         setTrips(Array.isArray(ts) ? ts : []);
       } catch (e) {
-        if (!cancelled) setErr(e?.message || "Kunde inte ladda båtar.");
+        if (!cancelled) setErr(e?.message || 'Kunde inte ladda båtar.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -66,7 +83,7 @@ export default function Boats() {
     };
   }, [token]);
 
-  // Aggregate stats per boat (trip count + total distance)
+  // Aggregat per båt
   const statsByBoat = useMemo(() => {
     const map = new Map(); // boatId -> { count, nm }
     for (const b of boats) map.set(b._id, { count: 0, nm: 0 });
@@ -80,92 +97,105 @@ export default function Boats() {
   }, [boats, trips]);
 
   return (
-    <div className='max-w-3xl mx-auto'>
-      {/* Page header */}
-      <div className='flex items-center justify-between mb-4'>
-        <h1 className='text-2xl md:text-3xl font-bold'>Dina båtar</h1>
-        <Button as={Link} to='/boats/new' leftIcon={<PlusCircle size={16} />}>
+    <div className="mx-auto max-w-3xl">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl md:text-3xl font-bold">Dina båtar</h1>
+        <ButtonLink to="/boats/new" leftIcon={<PlusCircle size={16} />}>
           Lägg till båt
-        </Button>
+        </ButtonLink>
       </div>
 
-      {/* Error banner */}
+      {/* Error */}
       {err && (
-        <div className='mb-3 border border-red-300 bg-red-50 text-red-700 p-3'>
-          {err}
-        </div>
+        <Card variant="outline" className="mb-4 border-red-300 bg-red-50">
+          <CardContent padding="md" className="text-red-700">
+            {err}
+          </CardContent>
+        </Card>
       )}
 
-      {/* Loading skeletons */}
+      {/* Loading */}
       {loading ? (
-        <div className='grid gap-3'>
+        <ul className="grid gap-3">
           {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className='bg-white border border-brand-border/40 px-4 py-3'
-            >
-              <div className='animate-pulse space-y-3'>
-                <div className='h-5 w-40 bg-gray-200' />
-                <div className='grid grid-cols-2 gap-10'>
-                  <div className='h-4 w-24 bg-gray-200' />
-                  <div className='h-4 w-24 bg-gray-200' />
-                </div>
-              </div>
-            </div>
+            <li key={i}>
+              <Card variant="outline">
+                <CardContent padding="md">
+                  <div className="flex items-center gap-3">
+                    <div className="h-14 w-14 rounded-xl bg-gray-200 animate-pulse" />
+                    <div className="flex-1">
+                      <div className="h-5 w-40 rounded bg-gray-200 animate-pulse" />
+                      <div className="mt-2 grid grid-cols-2 gap-8">
+                        <div className="h-4 w-20 rounded bg-gray-200 animate-pulse" />
+                        <div className="h-4 w-24 rounded bg-gray-200 animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </li>
           ))}
-        </div>
+        </ul>
       ) : boats.length === 0 ? (
         // Empty state
-        <div className='bg-white border border-brand-border/40 p-6'>
-          <p className='mb-3'>Du har inga båtar ännu. Lägg till din första!</p>
-          <Link to={`/boats/${b._id}`}>
-            <Card className='px-4 py-3'>
-              <CardContent className='p-0'>
-                {/* ...din nuvarande inner-HTML... */}
-                <ChevronRight className='text-gray-400' />
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
+        <Card variant="elevated" radius="xl">
+          <CardHeader padding="lg">
+            <CardTitle>Inga båtar ännu</CardTitle>
+            <CardDescription>Lägg till din första båt för att börja logga resor.</CardDescription>
+          </CardHeader>
+          <CardFooter padding="lg">
+            <ButtonLink to="/boats/new">Lägg till båt</ButtonLink>
+          </CardFooter>
+        </Card>
       ) : (
-        // Boats list
-        <ul className='grid gap-3'>
+        // Lista
+        <ul className="grid gap-3">
           {boats.map((b) => {
             const s = statsByBoat.get(b._id) || { count: 0, nm: 0 };
             return (
               <li key={b._id}>
-                <Link to={`/boats/${b._id}`}>
-                  <Card className='px-4 py-3'>
-                    <CardContent className='p-0'>
-                      <h3 className='text-lg font-semibold truncate'>
-                        {b.name}
-                      </h3>
+                <Card
+                  as={Link}
+                  to={`/boats/${b._id}`}
+                  variant="outline"
+                  radius="xl"
+                  interactive
+                  className="block"
+                >
+                  <CardContent padding="md">
+                    <div className="flex items-center gap-3">
+                      {/* Thumbnail */}
+                      <BoatThumb boat={b} />
 
-                      {/* Optional subline if you store model/length/etc */}
-                      {(b.model || b.lengthM) && (
-                        <p className='mt-0.5 text-sm text-gray-600 truncate'>
-                          {b.model ? b.model : ""}
-                          {b.model && b.lengthM ? " · " : ""}
-                          {b.lengthM ? `${b.lengthM} m` : ""}
-                        </p>
-                      )}
-
-                      <div className='mt-2 grid grid-cols-2 gap-10 text-sm'>
-                        <div>
-                          <p className='text-gray-500'>Antal resor</p>
-                          <p className='mt-0.5 font-medium'>{s.count}</p>
-                        </div>
-                        <div>
-                          <p className='text-gray-500'>Total distans</p>
-                          <p className='mt-0.5 font-medium'>
-                            {s.nm.toFixed(0)} NM
+                      {/* Text + stats */}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-lg font-semibold">{b.name}</h3>
+                        {(b.model || b.lengthM) && (
+                          <p className="mt-0.5 truncate text-sm text-gray-600">
+                            {b.model ? b.model : ''}
+                            {b.model && b.lengthM ? ' · ' : ''}
+                            {b.lengthM ? `${b.lengthM} m` : ''}
                           </p>
+                        )}
+
+                        <div className="mt-2 grid grid-cols-2 gap-8 text-sm">
+                          <div>
+                            <p className="text-gray-500">Antal resor</p>
+                            <p className="mt-0.5 font-medium">{s.count}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Total distans</p>
+                            <p className="mt-0.5 font-medium">{nmFmt.format(s.nm)} NM</p>
+                          </div>
                         </div>
                       </div>
-                      <ChevronRight className='text-gray-400' />
-                    </CardContent>
-                  </Card>
-                </Link>
+
+                      {/* Chevron */}
+                      <ChevronRight className="text-gray-400" aria-hidden="true" />
+                    </div>
+                  </CardContent>
+                </Card>
               </li>
             );
           })}

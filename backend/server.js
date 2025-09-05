@@ -45,6 +45,8 @@ app.use('/uploads', express.static(uploadsDir));
 /* Health */
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
+app.get('/', (_req, res) => res.json({ message: 'Boat API Server is running!' }));
+
 /* DB */
 console.log('Connecting MongoDB:', (process.env.MONGO_URL || '').slice(0, 40) + '…');
 connectDB(process.env.MONGO_URL);

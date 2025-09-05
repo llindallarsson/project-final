@@ -20,6 +20,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { api } from '../api';
+import { estimateDistanceNm } from '../lib/distance';
+import { getPhotoUrl } from '../lib/photo';
 import TripMap from '../components/TripMap';
 import Button from '../components/ui/Button';
 import ButtonLink from '../components/ui/ButtonLink';
@@ -47,32 +49,6 @@ function fmtDuration(min) {
 }
 function formatNm(n) {
   return Number.isFinite(n) ? `${n.toFixed(2)} NM` : '—';
-}
-
-/* ---------- Distance helpers (Haversine → NM) ---------- */
-const toRad = (x) => (x * Math.PI) / 180;
-function haversineNm(a, b) {
-  if (!a?.lat || !a?.lng || !b?.lat || !b?.lng) return 0;
-  const R = 6371000; // meters
-  const dLat = toRad(b.lat - a.lat);
-  const dLon = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return (2 * R * Math.asin(Math.sqrt(h))) / 1852; // m → NM
-}
-function nmFromRoute(route = []) {
-  if (!Array.isArray(route) || route.length < 2) return 0;
-  let sum = 0;
-  for (let i = 1; i < route.length; i++) sum += haversineNm(route[i - 1], route[i]);
-  return sum;
-}
-function distanceNmFromTrip(trip) {
-  if (!trip) return null;
-  if (Number.isFinite(trip.distanceNm)) return Number(trip.distanceNm);
-  if (Array.isArray(trip.route) && trip.route.length > 1) return nmFromRoute(trip.route);
-  if (trip.start?.lat && trip.end?.lat) return haversineNm(trip.start, trip.end);
-  return null;
 }
 
 /* ---------- Wind helpers (always m/s) ---------- */
@@ -114,12 +90,6 @@ export default function TripDetails() {
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
-
-  const apiBase =
-    import.meta.env.VITE_API_URL ??
-    (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-      ? 'http://localhost:8080'
-      : 'https://vindra.onrender.com');
 
   useEffect(() => {
     let alive = true;
@@ -188,11 +158,6 @@ export default function TripDetails() {
 
   const WIcon = WEATHER_ICON[trip.weather] || null;
   const photos = Array.isArray(trip.photos) ? trip.photos : [];
-  const photoUrl = (p) => {
-    const raw = typeof p === 'string' ? p : p?.url || p?.path || p?.filename || '';
-    if (!raw) return '';
-    return raw.startsWith('http') ? raw : `${apiBase}${raw.startsWith('/') ? '' : '/'}${raw}`;
-  };
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -253,7 +218,7 @@ export default function TripDetails() {
                   windMs != null ? ` · ${windMs.toFixed(1)} m/s` : ''
                 }`}
               />
-              <InfoChip icon={Ship} label="Båt" value={trip.boat?.name || trip.boatName || '—'} />
+              <InfoChip icon={Ship} label="Båt" value={trip.boatId?.name || '—'} />
               <InfoChip
                 icon={Users}
                 label="Besättning"
@@ -320,7 +285,7 @@ export default function TripDetails() {
             <CardContent padding="lg">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {photos.map((p, i) => {
-                  const url = photoUrl(p);
+                  const url = getPhotoUrl(p);
                   if (!url) return null;
                   const alt = trip.title ? `Foto ${i + 1} – ${trip.title}` : `Foto ${i + 1}`;
                   return (

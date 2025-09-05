@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
+
 import BoatForm from '../components/BoatForm';
-import { Card, CardHeader, CardContent } from '../components/ui/Card';
+import { Card, CardContent, CardHeader } from '../components/ui/Card';
 
 export default function AddBoat() {
   const nav = useNavigate();
@@ -16,7 +17,10 @@ export default function AddBoat() {
         <CardContent padding="lg">
           <BoatForm
             mode="create"
-            onSaved={(boat) => nav(`/boats/${boat._id}`)}
+            onSaved={(boat) => {
+              const id = boat?._id ?? boat?.id ?? boat?.boat?._id ?? boat?.data?._id;
+              nav(id ? `/boats/${id}` : '/boats');
+            }}
             onCancel={() => nav('/boats')}
           />
         </CardContent>

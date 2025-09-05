@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+
 import { api } from '../api';
+import Button from '../components/ui/Button';
+import Input, { PasswordInput } from '../components/ui/Input';
 import { useAuth } from '../store/auth';
 import AuthLayout from './auth/AuthLayout';
-import Input, { PasswordInput } from '../components/ui/Input';
-import Button from '../components/ui/Button';
 
 export default function Signup() {
   const nav = useNavigate();
@@ -57,7 +58,7 @@ export default function Signup() {
   }
 
   return (
-    <AuthLayout title="Skapa konto" subtitle="Från vind till minne.">
+    <AuthLayout title="Skapa konto">
       <form onSubmit={onSubmit} className="grid gap-4" noValidate>
         {/* Email */}
         <Input
@@ -65,6 +66,7 @@ export default function Signup() {
           id="email"
           type="email"
           required
+          autoFocus
           autoComplete="email"
           inputMode="email"
           spellCheck="false"

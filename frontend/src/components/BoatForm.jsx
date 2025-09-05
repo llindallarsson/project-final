@@ -1,10 +1,10 @@
 import { useState } from 'react';
+
 import { api } from '../api';
 import { useAuth } from '../store/auth';
-import Input from './ui/Input';
-import Button from './ui/Button';
-// Om du vill använda samma bilduppladdare som i TripForm – annars ta bort nästa rad och fallbacka på <input type="file" />
 import PhotoPicker from './PhotoPicker';
+import Button from './ui/Button';
+import Input from './ui/Input';
 
 export default function BoatForm({
   mode = 'create', // "create" | "edit"
@@ -140,7 +140,6 @@ export default function BoatForm({
           placeholder="t.ex. 7,8"
           value={lengthStr}
           onChange={(e) => setLengthStr(e.target.value)}
-          hint="Du kan skriva 7,8 eller 7.8"
         />
       </div>
 
@@ -153,7 +152,6 @@ export default function BoatForm({
           placeholder="t.ex. 1,49"
           value={draftStr}
           onChange={(e) => setDraftStr(e.target.value)}
-          hint="Du kan skriva 1,49 eller 1.49"
         />
         <Input
           label="Motor"

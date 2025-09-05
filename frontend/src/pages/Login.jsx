@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+
 import { api } from '../api';
+import Button from '../components/ui/Button';
+import Input, { PasswordInput } from '../components/ui/Input';
 import { useAuth } from '../store/auth';
 import AuthLayout from './auth/AuthLayout';
-import Input, { PasswordInput } from '../components/ui/Input';
-import Button from '../components/ui/Button';
 
 export default function Login() {
   const nav = useNavigate();
@@ -45,7 +46,7 @@ export default function Login() {
   }
 
   return (
-    <AuthLayout title="Logga in" subtitle="Välkommen tillbaka.">
+    <AuthLayout title="Logga in">
       <form onSubmit={onSubmit} className="grid gap-4" noValidate>
         {/* Email */}
         <Input

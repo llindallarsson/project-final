@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
+import { useEffect, useMemo, useState } from 'react';
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+
 import { api } from '../api';
-import { useAuth } from '../store/auth';
 import Button from '../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
+import { useAuth } from '../store/auth';
 
 // ---- Leaflet default marker icons (Vite/React safe & idempotent) ----
 if (typeof window !== 'undefined' && !window.__leaflet_icon_patch_applied) {

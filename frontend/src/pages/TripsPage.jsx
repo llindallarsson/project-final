@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { api } from '../api';
+import { estimateDistanceNm } from '../lib/distance.js';
 import TripCard from '../components/TripCard';
 import Button from '../components/ui/Button';
 import ButtonLink from '../components/ui/ButtonLink';
@@ -31,29 +32,6 @@ function startOfYear(d) {
   x.setMonth(0, 1);
   x.setHours(0, 0, 0, 0);
   return x;
-}
-
-/* ---------- Distance helpers (Haversine, NM) ---------- */
-const toRad = (x) => (x * Math.PI) / 180;
-function haversineNm(a, b) {
-  const R = 6371000; // meters
-  const dLat = toRad(b.lat - a.lat);
-  const dLon = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return (2 * R * Math.asin(Math.sqrt(h))) / 1852; // m -> NM
-}
-function estimateDistanceNm(trip) {
-  if (trip?.route?.length > 1) {
-    let sum = 0;
-    for (let i = 1; i < trip.route.length; i++) {
-      sum += haversineNm(trip.route[i - 1], trip.route[i]);
-    }
-    return sum;
-  }
-  if (trip?.start?.lat && trip?.end?.lat) return haversineNm(trip.start, trip.end);
-  return 0;
 }
 
 /* ---------- Unique sailing day counter ---------- */

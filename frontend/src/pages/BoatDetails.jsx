@@ -1,43 +1,23 @@
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 // src/pages/BoatDetails.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+
 import { api } from '../api';
-import { useAuth } from '../store/auth';
+import { estimateDistanceNm } from '../lib/distance';
+import { getPhotoUrl } from '../lib/photo';
 import BoatForm from '../components/BoatForm';
 import Button from '../components/ui/Button';
 import ButtonLink from '../components/ui/ButtonLink';
 import {
   Card,
-  CardHeader,
   CardContent,
-  CardFooter,
-  CardTitle,
   CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from '../components/ui/Card';
-import { Pencil, Trash2, ArrowLeft } from 'lucide-react';
-
-/* ---------- Distance helpers (nautical miles) ---------- */
-const toRad = (x) => (x * Math.PI) / 180;
-function haversineNm(a, b) {
-  const Rm = 6371000; // meters
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return (2 * Rm * Math.asin(Math.sqrt(h))) / 1852;
-}
-function estimateDistanceNm(trip) {
-  if (trip?.route?.length > 1) {
-    let s = 0;
-    for (let i = 1; i < trip.route.length; i++) {
-      s += haversineNm(trip.route[i - 1], trip.route[i]);
-    }
-    return s;
-  }
-  if (trip?.start?.lat && trip?.end?.lat) return haversineNm(trip.start, trip.end);
-  return 0;
-}
+import { useAuth } from '../store/auth';
 
 /* ---------- Component ---------- */
 export default function BoatDetails() {
@@ -51,21 +31,11 @@ export default function BoatDetails() {
   const [edit, setEdit] = useState(false);
   const [err, setErr] = useState('');
 
-  const apiBase =
-    import.meta.env.VITE_API_URL ??
-    (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-      ? 'http://localhost:8080'
-      : 'https://vindra.onrender.com');
-
-  function photoUrl(raw) {
-    if (!raw) return '';
-    const u = typeof raw === 'string' ? raw : raw.url || raw.path || '';
-    if (!u) return '';
-    return u.startsWith('http') ? u : `${apiBase}${u.startsWith('/') ? '' : '/'}${u}`;
-  }
-
   async function load() {
     try {
+      console.log('Loading boat with ID:', id);
+      console.log('Token exists:', !!token);
+
       setErr('');
       setLoading(true);
       const [b, ts] = await Promise.all([
@@ -75,6 +45,7 @@ export default function BoatDetails() {
       setBoat(b || null);
       setTrips((ts || []).filter((t) => t.boatId === id));
     } catch (e) {
+      console.error('Load error:', e);
       setErr(e.message || 'Kunde inte ladda båten.');
     } finally {
       setLoading(false);
@@ -154,7 +125,7 @@ export default function BoatDetails() {
           <Card variant="outline" radius="xl" className="overflow-hidden mb-4">
             {boat.photoUrl || boat.photo ? (
               <img
-                src={photoUrl(boat.photoUrl || boat.photo)}
+                src={getPhotoUrl(boat.photoUrl || boat.photo)}
                 alt={boat.name}
                 className="w-full max-h-80 object-cover"
               />
