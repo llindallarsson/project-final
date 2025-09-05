@@ -112,7 +112,7 @@ export default function TripDetails() {
     };
   }, [id, token]);
 
-  const distanceNm = useMemo(() => distanceNmFromTrip(trip), [trip]);
+  const distanceNm = useMemo(() => estimateDistanceNm(trip), [trip]);
   const windMs = useMemo(() => windMsFromTrip(trip), [trip]);
 
   const handleDelete = useCallback(async () => {
